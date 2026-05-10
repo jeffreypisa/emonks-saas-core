@@ -1,0 +1,77 @@
+{% extends "base.twig" %}
+
+{% block content %}
+<div class="container py-4 py-lg-5">
+  <div class="row g-4">
+    <div class="col-12 col-lg-8">
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+          <h1 class="h4 mb-3">Subscription & Billing</h1>
+          <p class="text-muted">Kies een plan en beheer je facturatie vanuit Stripe.</p>
+          <div class="btn-group mb-3" role="group" aria-label="Billing cycle">
+            <button type="button" class="btn btn-sm {{ current_billing_cycle == 'monthly' ? 'btn-primary' : 'btn-outline-secondary' }}" disabled>Maandelijks</button>
+            <button type="button" class="btn btn-sm {{ current_billing_cycle == 'yearly' ? 'btn-primary' : 'btn-outline-secondary' }}" disabled>Jaarlijks</button>
+          </div>
+          <div class="row g-3">
+            {% for key, plan in plans %}
+              <div class="col-12 col-md-4">
+                <div class="border rounded-3 p-3 h-100 {{ key == current_plan ? 'border-primary' : '' }}">
+                  <h2 class="h6">{{ plan.label }}</h2>
+                  <p class="small text-muted mb-1">Max {{ plan.max_workspaces }} workspaces</p>
+                  <p class="small mb-2">
+                    <strong>{{ plan.currency|default('EUR') }} {{ current_billing_cycle == 'yearly' ? (plan.price_yearly|default(0)) : (plan.price_monthly|default(0)) }}</strong>
+                    / {{ current_billing_cycle == 'yearly' ? 'jaar' : 'maand' }}
+                  </p>
+                  {% if key == current_plan %}
+                    <button class="btn btn-sm btn-outline-secondary" type="button" disabled>Huidig plan</button>
+                  {% elseif billing_active %}
+                    <form method="post" action="{{ function('emonks_admin_post_url', 'emonks_billing_change_plan') }}">
+                      {{ function('wp_nonce_field', 'emonks_billing_change_plan', 'emonks_nonce') }}
+                      <input type="hidden" name="plan" value="{{ key }}">
+                      <input type="hidden" name="cycle" value="{{ current_billing_cycle }}">
+                      <button class="btn btn-sm btn-primary" type="submit">Wijzig naar {{ plan.label }}</button>
+                    </form>
+                  {% else %}
+                    <form method="post" action="{{ admin_post.billing_checkout }}">
+                      {{ function('wp_nonce_field', 'emonks_billing_checkout', 'emonks_nonce') }}
+                      <input type="hidden" name="plan" value="{{ key }}">
+                      <div class="mb-2">
+                        <select name="cycle" class="form-select form-select-sm">
+                          <option value="monthly">Maandelijks</option>
+                          <option value="yearly">Jaarlijks</option>
+                        </select>
+                      </div>
+                      <button class="btn btn-sm btn-primary" type="submit">Start checkout</button>
+                    </form>
+                  {% endif %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+          <h2 class="h5 mb-3">Customer Portal</h2>
+          <p class="text-muted">Update betaalmethode, bekijk facturen en beheer subscription in het Stripe portal.</p>
+          <form method="post" action="{{ admin_post.billing_portal }}">
+            {{ function('wp_nonce_field', 'emonks_billing_portal', 'emonks_nonce') }}
+            <button class="btn btn-outline-secondary" type="submit">Open Stripe Portal</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-lg-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+          <h2 class="h6 text-uppercase text-muted">Status</h2>
+          <p class="mb-1">Plan: <strong>{{ current_plan|capitalize }}</strong></p>
+          <p class="mb-0">Subscription: <strong>{{ billing_active ? 'Actief' : 'Inactief' }}</strong></p>
+          <p class="mb-0">Workspaces: <strong>{{ current_workspace_count }}/{{ plans[current_plan].max_workspaces ?? 0 }}</strong></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

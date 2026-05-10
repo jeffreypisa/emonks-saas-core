@@ -1,0 +1,15 @@
+{
+  "name": "emonks/saas-core",
+  "description": "Emonks SaaS Core plugin",
+  "type": "wordpress-plugin",
+  "require": {
+    "php": ">=8.0",
+    "timber/timber": "^2.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Emonks\\SaasCore\\": "includes/",
+      "Emonks\\SaasCore\\Services\\": "services/"
+    }
+  }
+}

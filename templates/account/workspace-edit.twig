@@ -1,0 +1,56 @@
+{% extends "base.twig" %}
+
+{% block content %}
+<div class="container py-4 py-lg-5">
+  <div class="row g-4">
+    <div class="col-12 col-lg-8">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+          <h1 class="h4 mb-3">Workspace bewerken</h1>
+          <form method="post" action="{{ admin_post.workspace_save }}" class="row g-3">
+            {{ function('wp_nonce_field', 'emonks_workspace_save', 'emonks_nonce') }}
+            <input type="hidden" name="workspace_id" value="{{ workspace.ID }}">
+            <div class="col-12">
+              <label class="form-label" for="ws_title">Naam</label>
+              <input id="ws_title" name="title" class="form-control" value="{{ workspace.post_title }}" required>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="ws_service">Service type</label>
+              <input id="ws_service" name="service_type" class="form-control" value="{{ function('emonks_get_workspace_meta', workspace.ID, 'service_type', 'generic') }}">
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="ws_status">Status</label>
+              {% set current_status = function('emonks_get_workspace_status', workspace.ID) %}
+              <select id="ws_status" name="workspace_status" class="form-select">
+                {% for key, label in {'draft':'Draft','active':'Active','suspended':'Suspended','archived':'Archived','published':'Published'} %}
+                  <option value="{{ key }}" {{ key == current_status ? 'selected' : '' }}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="ws_slug">Public slug</label>
+              <input id="ws_slug" name="public_slug" class="form-control" value="{{ function('emonks_get_workspace_meta', workspace.ID, 'public_slug', '') }}">
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="ws_settings">Settings JSON</label>
+              <textarea id="ws_settings" name="settings_json" rows="8" class="form-control">{{ function('emonks_get_workspace_meta', workspace.ID, 'settings', '{}') }}</textarea>
+            </div>
+            <div class="col-12 d-flex gap-2">
+              <button class="btn btn-primary" type="submit">Opslaan</button>
+              <a class="btn btn-outline-secondary" href="/{{ routes.account }}/{{ routes.workspaces }}/">Terug</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-lg-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+          <h2 class="h6 text-uppercase text-muted">Publicatiehulp</h2>
+          <p class="small text-muted mb-0">Public pagina is alleen zichtbaar wanneer status <code>published</code> is en owner een actieve subscription heeft.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

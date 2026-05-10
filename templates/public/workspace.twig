@@ -1,0 +1,33 @@
+{% extends "base.twig" %}
+
+{% block content %}
+<div class="container py-4 py-lg-5">
+  <div class="row g-4">
+    <div class="col-12 col-lg-8">
+      <article class="card border-0 shadow-sm">
+        <div class="card-body p-4 p-lg-5">
+          <p class="text-uppercase small text-muted mb-2">Public Workspace</p>
+          <h1 class="h3 mb-3">{{ workspace.post_title }}</h1>
+          <p class="text-muted mb-4">Deze publieke pagina is gekoppeld aan service type <strong>{{ service_type ?: 'generic' }}</strong>.</p>
+
+          <div class="alert alert-light border mb-0">
+            <strong>Template tip:</strong> override dit bestand in je theme om service-specifieke content, afbeeldingen en secties toe te voegen.
+          </div>
+        </div>
+      </article>
+    </div>
+    <aside class="col-12 col-lg-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+          <h2 class="h6 text-uppercase text-muted">Context</h2>
+          <ul class="list-unstyled small mb-0">
+            <li class="mb-2"><strong>Owner:</strong> {{ owner.display_name ?: owner.user_email }}</li>
+            <li class="mb-2"><strong>Status:</strong> {{ function('emonks_get_workspace_status', workspace.ID) }}</li>
+            <li><strong>Slug:</strong> {{ function('emonks_get_workspace_meta', workspace.ID, 'public_slug', '') }}</li>
+          </ul>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+{% endblock %}

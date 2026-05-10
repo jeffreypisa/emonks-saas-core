@@ -1,0 +1,39 @@
+{% extends "base.twig" %}
+
+{% block content %}
+<div class="container py-4 py-lg-5">
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-4">
+      <h1 class="h4 mb-2">Onboarding</h1>
+      <p class="text-muted mb-3">Doorloop de checklist om je workspace live te zetten.</p>
+      <div class="progress" role="progressbar" aria-label="Onboarding progress" aria-valuenow="{{ onboarding_progress.percentage }}" aria-valuemin="0" aria-valuemax="100" style="height:10px;">
+        <div class="progress-bar" style="width: {{ onboarding_progress.percentage }}%"></div>
+      </div>
+      <p class="small text-muted mt-2 mb-0">{{ onboarding_progress.percentage }}% voltooid</p>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    {% for step, done in onboarding_progress.steps %}
+      <div class="col-12 col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body p-4 d-flex flex-column">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+              <h2 class="h6 text-capitalize mb-0">{{ step|replace({'_':' '}) }}</h2>
+              <span class="badge {{ done ? 'text-bg-success' : 'text-bg-secondary' }}">{{ done ? 'Done' : 'Open' }}</span>
+            </div>
+            <p class="small text-muted flex-grow-1">Voltooi deze stap om je account production-ready te maken.</p>
+            {% if not done %}
+              <form method="post" action="{{ admin_post.onboarding_step }}">
+                {{ function('wp_nonce_field', 'emonks_onboarding_step', 'emonks_nonce') }}
+                <input type="hidden" name="step" value="{{ step }}">
+                <button class="btn btn-sm btn-outline-primary" type="submit">Markeer als voltooid</button>
+              </form>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

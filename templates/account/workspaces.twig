@@ -1,0 +1,96 @@
+{% extends "base.twig" %}
+
+{% block content %}
+<div class="container py-4 py-lg-5">
+  <div class="d-flex flex-wrap gap-3 justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-1">{{ labels.plural|default('Items') }}</h1>
+      <p class="text-muted mb-0">Beheer je workspaces, statussen en service-instellingen.</p>
+    </div>
+    <div>
+      {% if can_create_workspace %}
+        <a class="btn btn-primary" href="/{{ routes.account }}/{{ routes.workspaces }}/new/">Nieuwe workspace</a>
+      {% else %}
+        <a class="btn btn-outline-secondary" href="/{{ routes.account }}/{{ routes.billing }}/">Upgrade plan</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-4">
+      <h2 class="h5 mb-3">Workspace aanmaken</h2>
+      <form method="post" action="{{ admin_post.workspace_save }}" class="row g-3">
+        {{ function('wp_nonce_field', 'emonks_workspace_save', 'emonks_nonce') }}
+        <input type="hidden" name="workspace_id" value="0">
+        <div class="col-12 col-md-6">
+          <label class="form-label" for="ws_title">Naam</label>
+          <input id="ws_title" name="title" class="form-control" required placeholder="Bijv. Main workspace">
+        </div>
+        <div class="col-12 col-md-6">
+          <label class="form-label" for="ws_service">Service type</label>
+          <input id="ws_service" name="service_type" class="form-control" placeholder="generic">
+        </div>
+        <div class="col-12 col-md-6">
+          <label class="form-label" for="ws_slug">Public slug</label>
+          <input id="ws_slug" name="public_slug" class="form-control" placeholder="mijn-workspace">
+        </div>
+        <div class="col-12 col-md-6">
+          <label class="form-label" for="ws_status">Status</label>
+          <select id="ws_status" name="workspace_status" class="form-select">
+            <option value="draft">Draft</option>
+            <option value="active">Active</option>
+            <option value="suspended">Suspended</option>
+            <option value="archived">Archived</option>
+            <option value="published">Published</option>
+          </select>
+        </div>
+        <div class="col-12">
+          <button class="btn btn-primary" type="submit">Workspace opslaan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Naam</th>
+              <th>Service</th>
+              <th>Status</th>
+              <th>Public URL</th>
+              <th class="text-end">Acties</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if workspaces is empty %}
+              <tr><td colspan="5" class="text-center py-4 text-muted">Nog geen workspaces.</td></tr>
+            {% else %}
+              {% for workspace in workspaces %}
+                <tr>
+                  <td>{{ workspace.post_title }}</td>
+                  <td>{{ function('emonks_get_workspace_meta', workspace.ID, 'service_type', 'generic') }}</td>
+                  <td><span class="badge text-bg-secondary">{{ function('emonks_get_workspace_status', workspace.ID) }}</span></td>
+                  <td>
+                    {% set slug = function('emonks_get_workspace_meta', workspace.ID, 'public_slug', '') %}
+                    {% if slug %}
+                      <a href="/{{ routes.public }}/{{ slug }}/" target="_blank" rel="noopener">/{{ routes.public }}/{{ slug }}/</a>
+                    {% else %}
+                      <span class="text-muted">n.v.t.</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-end">
+                    <a class="btn btn-sm btn-outline-secondary" href="/{{ routes.account }}/{{ routes.workspaces }}/{{ workspace.ID }}/edit/">Bewerken</a>
+                  </td>
+                </tr>
+              {% endfor %}
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

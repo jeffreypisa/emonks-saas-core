@@ -1,0 +1,133 @@
+<?php
+/**
+ * Class: Plugin
+ * Purpose: Main plugin bootstrap and service container entry.
+ * Responsibilities: Load classes, wire hooks, initialize all SaaS core modules.
+ * Example: Plugin::instance()->boot();
+ * Hooks: Registers all module hooks via module boot() methods.
+ * Architecture Role: Composition root of the SaaS core plugin.
+ */
+
+declare(strict_types=1);
+
+namespace Emonks\SaasCore;
+
+final class Plugin
+{
+    private static ?self $instance = null;
+
+    /** @var array<string,object> */
+    private array $services = [];
+
+    /**
+     * Parameters: none.
+     * Return: Plugin instance.
+     * Security: no direct input processed.
+     * Example: Plugin::instance();
+     */
+    public static function instance(): self
+    {
+        if (self::$instance === null) {
+            self::$instance = new self();
+        }
+
+        return self::$instance;
+    }
+
+    private function __construct()
+    {
+    }
+
+    /**
+     * Parameters: none.
+     * Return: void.
+     * Security: only runs in WP runtime.
+     * Example: Plugin::instance()->boot();
+     */
+    public function boot(): void
+    {
+        $this->loadDependencies();
+        TimberBridge::bootstrap();
+        $this->registerServices();
+
+        foreach ($this->services as $service) {
+            if (method_exists($service, 'boot')) {
+                $service->boot();
+            }
+        }
+
+        do_action('emonks_saas_core_booted', $this);
+    }
+
+    /**
+     * Parameters: none.
+     * Return: object|null
+     * Security: no unsafe operations.
+     * Example: Plugin::instance()->get('routes');
+     */
+    public function get(string $key): ?object
+    {
+        return $this->services[$key] ?? null;
+    }
+
+    private function loadDependencies(): void
+    {
+        $files = [
+            'TemplateLoader.php',
+            'TimberBridge.php',
+            'Routes.php',
+            'Auth.php',
+            'Dashboard.php',
+            'Workspaces.php',
+            'WorkspaceStatuses.php',
+            'Permissions.php',
+            'Plans.php',
+            'Billing.php',
+            'Stripe.php',
+            'Webhooks.php',
+            'Services.php',
+            'Features.php',
+            'Settings.php',
+            'Admin.php',
+            'Assets.php',
+            'Emails.php',
+            'Logger.php',
+            'Onboarding.php',
+            'RestApi.php',
+            'CustomDomains.php',
+        ];
+
+        foreach ($files as $file) {
+            require_once EMONKS_SAAS_CORE_PATH . 'includes/' . $file;
+        }
+
+        require_once EMONKS_SAAS_CORE_PATH . 'services/GuestGuideService.php';
+    }
+
+    private function registerServices(): void
+    {
+        $this->services = [
+            'settings' => new Settings(),
+            'template_loader' => new TemplateLoader(),
+            'statuses' => new WorkspaceStatuses(),
+            'plans' => new Plans(),
+            'features' => new Features(),
+            'services_registry' => new Services(),
+            'permissions' => new Permissions(),
+            'admin' => new Admin(),
+            'auth' => new Auth(),
+            'workspaces' => new Workspaces(),
+            'dashboard' => new Dashboard(),
+            'routes' => new Routes(),
+            'assets' => new Assets(),
+            'billing' => new Billing(),
+            'stripe' => new Stripe(),
+            'webhooks' => new Webhooks(),
+            'emails' => new Emails(),
+            'logger' => new Logger(),
+            'onboarding' => new Onboarding(),
+            'rest_api' => new RestApi(),
+            'custom_domains' => new CustomDomains(),
+        ];
+    }
+}

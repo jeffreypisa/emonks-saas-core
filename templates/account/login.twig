@@ -1,0 +1,29 @@
+{% extends "base.twig" %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-12 col-md-8 col-lg-5">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4 p-lg-5">
+          <h1 class="h4 mb-2">Inloggen</h1>
+          <p class="text-muted mb-4">Welkom terug. Log in om je account en workspaces te beheren.</p>
+          <form method="post" class="vstack gap-3">
+            {{ function('wp_nonce_field', 'emonks_login_action', 'emonks_nonce') }}
+            <div>
+              <label class="form-label" for="user_login">E-mail of gebruikersnaam</label>
+              <input id="user_login" name="user_login" class="form-control" required>
+            </div>
+            <div>
+              <label class="form-label" for="user_password">Wachtwoord</label>
+              <input id="user_password" name="user_password" type="password" class="form-control" required>
+            </div>
+            <button class="btn btn-primary" type="submit">Inloggen</button>
+          </form>
+          <p class="small text-muted mt-3 mb-0">Nog geen account? <a href="/{{ routes.register }}/">Registreren</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

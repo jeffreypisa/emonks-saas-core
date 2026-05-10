@@ -1,0 +1,83 @@
+{% extends "base.twig" %}
+
+{% block content %}
+<div class="container py-4 py-lg-5">
+  <div class="row g-4 align-items-stretch">
+    <div class="col-12 col-lg-8">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-body p-4">
+          <p class="text-uppercase small text-muted mb-2">Account</p>
+          <h1 class="h3 mb-3">Welkom, {{ current_user.display_name ?: current_user.user_email }}</h1>
+          <p class="text-muted mb-4">Beheer hier je workspaces, subscription en onboarding voortgang vanuit één centrale omgeving.</p>
+          <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-primary" href="/{{ routes.account }}/{{ routes.workspaces }}/">Naar workspaces</a>
+            <a class="btn btn-outline-secondary" href="/{{ routes.account }}/{{ routes.billing }}/">Beheer billing</a>
+            <a class="btn btn-outline-secondary" href="/{{ routes.account }}/{{ routes.onboarding }}/">Onboarding checklist</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-lg-4">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-body p-4">
+          <h2 class="h6 text-uppercase text-muted mb-3">Plan</h2>
+          <p class="h4 mb-1">{{ plans[current_plan].label ?? current_plan|capitalize }}</p>
+          <p class="text-muted mb-3">{{ workspace_count }}/{{ workspace_limit }} workspaces gebruikt</p>
+          {% if billing_active %}
+            <span class="badge text-bg-success">Subscription actief</span>
+          {% else %}
+            <span class="badge text-bg-warning">Subscription vereist</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if flash_messages %}
+    <div class="mt-4">
+      {% for key, message in flash_messages %}
+        <div class="alert alert-info mb-2">{{ message }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="row g-3 mt-1">
+    {% for status, count in workspace_status_counts %}
+      <div class="col-6 col-lg-2">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body py-3 text-center">
+            <div class="small text-muted text-uppercase">{{ status }}</div>
+            <div class="h4 mb-0">{{ count }}</div>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="card border-0 shadow-sm mt-4">
+    <div class="card-body p-4">
+      <h2 class="h5 mb-3">Snelle start</h2>
+      <div class="row g-3">
+        <div class="col-12 col-md-4">
+          <div class="border rounded-3 p-3 h-100">
+            <h3 class="h6">1. Eerste workspace</h3>
+            <p class="small text-muted mb-0">Maak je eerste workspace aan en kies een service type.</p>
+          </div>
+        </div>
+        <div class="col-12 col-md-4">
+          <div class="border rounded-3 p-3 h-100">
+            <h3 class="h6">2. Activeer billing</h3>
+            <p class="small text-muted mb-0">Koppel je subscription zodat publicatie en limieten actief worden.</p>
+          </div>
+        </div>
+        <div class="col-12 col-md-4">
+          <div class="border rounded-3 p-3 h-100">
+            <h3 class="h6">3. Publiceer</h3>
+            <p class="small text-muted mb-0">Zet status op <code>published</code> en deel je publieke URL.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
