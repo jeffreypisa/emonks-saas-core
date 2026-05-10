@@ -20,6 +20,7 @@ final class Admin
         add_submenu_page('emonks-saas-core', 'Billing', 'Billing', 'manage_options', 'emonks-saas-billing', [$this, 'renderBillingPage']);
         add_submenu_page('emonks-saas-core', 'Plans', 'Plans', 'manage_options', 'emonks-saas-plans', [$this, 'renderPlansPage']);
         add_submenu_page('emonks-saas-core', 'Features', 'Features', 'manage_options', 'emonks-saas-features', [$this, 'renderFeaturesPage']);
+        add_submenu_page('emonks-saas-core', 'Services', 'Services', 'manage_options', 'emonks-saas-services', [$this, 'renderServicesPage']);
         add_submenu_page('emonks-saas-core', 'Onboarding', 'Onboarding', 'manage_options', 'emonks-saas-onboarding', [$this, 'renderOnboardingPage']);
         add_submenu_page('emonks-saas-core', 'Logs', 'Logs', 'manage_options', 'emonks-saas-logs', [$this, 'renderLogsPage']);
     }
@@ -32,14 +33,26 @@ final class Admin
 
         wp_register_style('emonks-saas-admin', false, [], EMONKS_SAAS_CORE_VERSION);
         wp_enqueue_style('emonks-saas-admin');
-        wp_add_inline_style('emonks-saas-admin', '.emonks-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}.emonks-card{background:#fff;border:1px solid #dcdcde;border-radius:10px;padding:16px}.emonks-kpi{font-size:28px;font-weight:700;margin-top:8px}.emonks-muted{color:#646970}');
+        wp_add_inline_style(
+            'emonks-saas-admin',
+            '.emonks-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}' .
+            '.emonks-card{background:#fff;border:1px solid #dcdcde;border-radius:12px;padding:16px}' .
+            '.emonks-kpi{font-size:28px;font-weight:700;margin-top:8px}' .
+            '.emonks-muted{color:#646970}' .
+            '.emonks-header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin:12px 0 20px}' .
+            '.emonks-tip{background:#f6f7f7;border-left:4px solid #2271b1;padding:12px 14px;border-radius:8px;max-width:540px}' .
+            '.emonks-subtle{font-size:12px;color:#646970;line-height:1.45}' .
+            '.emonks-form-table td .description{margin-top:6px;display:block}'
+        );
     }
 
     public function renderDashboardPage(): void
     {
         $stats = $this->collectStats();
-        echo '<div class="wrap"><h1>Emonks SaaS Dashboard</h1>';
-        echo '<p class="emonks-muted">Overzicht van adoptie, workspaces en subscriptions.</p>';
+
+        echo '<div class="wrap">';
+        $this->renderPageHeader('Emonks SaaS Dashboard', 'Overzicht van adoptie, workspaces en subscriptions.', 'Gebruik dit dashboard om bottlenecks in onboarding, billing activatie en publicatie direct te signaleren.');
+
         echo '<div class="emonks-grid">';
         $this->renderKpiCard('Accounts', (string) $stats['accounts']);
         $this->renderKpiCard('Workspaces', (string) $stats['workspaces']);
@@ -53,20 +66,21 @@ final class Admin
         }
         echo '</tbody></table>';
 
-        echo '<h2 style="margin-top:24px;">Beheer UX tips</h2>';
-        echo '<ul><li>Configureer Stripe constants en test checkout flow.</li><li>Controleer feature flags per omgeving.</li><li>Gebruik routes/labels filters in je theme voor service-specifieke terminologie.</li></ul>';
+        echo '<h2 style="margin-top:24px;">Aanbevolen beheerflow</h2>';
+        echo '<ol><li>Controleer eerst Billing configuratie en test mode.</li><li>Valideer daarna planlimieten en features per service.</li><li>Rond af met onboarding- en publish-checks.</li></ol>';
         echo '</div>';
     }
 
     public function renderGeneralPage(): void
     {
         $settings = get_option(Settings::OPTION_KEY, []);
-        echo '<div class="wrap"><h1>Emonks SaaS - General</h1>';
-        echo '<p class="emonks-muted">Algemene instellingen voor branding en debug gedrag.</p>';
+        echo '<div class="wrap">';
+        $this->renderPageHeader('Emonks SaaS - General', 'Algemene instellingen voor branding en debug gedrag.', 'Houd branding neutraal en configureer debug alleen in test/staging om noise op productie te beperken.');
+
         $this->renderSettingsFormStart('general');
-        echo '<table class="form-table">';
-        echo '<tr><th scope="row"><label for="branding_name">Branding Name</label></th><td><input name="settings[branding][name]" id="branding_name" class="regular-text" value="' . esc_attr((string) ($settings['branding']['name'] ?? 'Emonks')) . '" /></td></tr>';
-        echo '<tr><th scope="row"><label for="debug_enabled">Debug Logging</label></th><td><label><input type="checkbox" name="settings[debug][enabled]" value="1" ' . checked((bool) ($settings['debug']['enabled'] ?? false), true, false) . ' /> Enable debug logging to PHP error log when WP_DEBUG=true</label></td></tr>';
+        echo '<table class="form-table emonks-form-table">';
+        echo '<tr><th scope="row"><label for="branding_name">Branding Name</label></th><td><input name="settings[branding][name]" id="branding_name" class="regular-text" value="' . esc_attr((string) ($settings['branding']['name'] ?? 'Emonks')) . '" /><span class="description">Wordt gebruikt als standaard productnaam in plugin UI context.</span></td></tr>';
+        echo '<tr><th scope="row"><label for="debug_enabled">Debug Logging</label></th><td><label><input type="checkbox" id="debug_enabled" name="settings[debug][enabled]" value="1" ' . checked((bool) ($settings['debug']['enabled'] ?? false), true, false) . ' /> Enable debug logging to PHP error log when WP_DEBUG=true</label><span class="description">Gebruik in combinatie met het Logs-tabblad voor snellere troubleshooting.</span></td></tr>';
         echo '</table>';
         submit_button('Save General Settings');
         $this->renderSettingsFormEnd();
@@ -78,8 +92,9 @@ final class Admin
         $settings = get_option(Settings::OPTION_KEY, []);
         $constants = (new Stripe())->constants();
 
-        echo '<div class="wrap"><h1>Emonks SaaS - Billing</h1>';
-        echo '<p class="emonks-muted">Checkout en portal URL instellingen, plus status van Stripe constants.</p>';
+        echo '<div class="wrap">';
+        $this->renderPageHeader('Emonks SaaS - Billing', 'Checkout/portal instellingen en provider readiness.', 'Billing gebruikt een provider interface. Standaard is Stripe actief, maar je kunt via filters een andere provider injecteren.');
+
         echo '<div class="emonks-grid">';
         $this->renderKpiCard('Secret key', $constants['secret_key'] !== '' ? 'Configured' : 'Missing');
         $this->renderKpiCard('Webhook secret', $constants['webhook_secret'] !== '' ? 'Configured' : 'Missing');
@@ -87,10 +102,10 @@ final class Admin
         echo '</div>';
 
         $this->renderSettingsFormStart('billing');
-        echo '<table class="form-table">';
-        echo '<tr><th scope="row">Test mode</th><td><label><input type="checkbox" name="settings[billing][test_mode]" value="1" ' . checked((bool) ($settings['billing']['test_mode'] ?? false), true, false) . ' /> Simuleer checkout/upgrade/downgrade zonder live Stripe mutaties</label></td></tr>';
-        echo '<tr><th scope="row">Success URL</th><td><input name="settings[billing][success_url]" class="regular-text" value="' . esc_attr((string) ($settings['billing']['success_url'] ?? home_url('/account/billing/'))) . '" /></td></tr>';
-        echo '<tr><th scope="row">Cancel URL</th><td><input name="settings[billing][cancel_url]" class="regular-text" value="' . esc_attr((string) ($settings['billing']['cancel_url'] ?? home_url('/account/billing/'))) . '" /></td></tr>';
+        echo '<table class="form-table emonks-form-table">';
+        echo '<tr><th scope="row">Test mode</th><td><label><input type="checkbox" name="settings[billing][test_mode]" value="1" ' . checked((bool) ($settings['billing']['test_mode'] ?? false), true, false) . ' /> Simuleer checkout/upgrade/downgrade zonder live provider mutaties</label><span class="description">Aanbevolen voor QA van planwissels en onboarding-flow.</span></td></tr>';
+        echo '<tr><th scope="row">Success URL</th><td><input name="settings[billing][success_url]" class="regular-text" value="' . esc_attr((string) ($settings['billing']['success_url'] ?? home_url('/account/billing/'))) . '" /><span class="description">Gebruiker landt hier na succesvolle checkout.</span></td></tr>';
+        echo '<tr><th scope="row">Cancel URL</th><td><input name="settings[billing][cancel_url]" class="regular-text" value="' . esc_attr((string) ($settings['billing']['cancel_url'] ?? home_url('/account/billing/'))) . '" /><span class="description">Gebruiker landt hier na afgebroken checkout.</span></td></tr>';
         echo '</table>';
         submit_button('Save Billing Settings');
         $this->renderSettingsFormEnd();
@@ -100,14 +115,15 @@ final class Admin
     public function renderPlansPage(): void
     {
         $plans = Plans::getPlans();
-        echo '<div class="wrap"><h1>Emonks SaaS - Plans</h1>';
-        echo '<p class="emonks-muted">Beheer labels, workspace limieten, features en Stripe prijskoppelingen.</p>';
+        echo '<div class="wrap">';
+        $this->renderPageHeader('Emonks SaaS - Plans', 'Beheer labels, limieten, pricing en planfeatures.', 'Planconfiguratie vormt de basis voor workspace-limieten, publish-gates en feature toegang. Houd volgorde en naming consistent.');
+
         $this->renderSettingsFormStart('plans');
         echo '<table class="widefat striped"><thead><tr><th>Plan key</th><th>Label</th><th>Max workspaces</th><th>Prijs p/m</th><th>Prijs p/j</th><th>Valuta</th><th>Features (comma separated)</th><th>Stripe Price Constant</th><th>Stripe Price ID Monthly</th><th>Stripe Price ID Yearly</th></tr></thead><tbody>';
         foreach ($plans as $key => $plan) {
             $features = is_array($plan['enabled_features'] ?? null) ? implode(',', $plan['enabled_features']) : '';
             echo '<tr>';
-            echo '<td><strong>' . esc_html((string) $key) . '</strong></td>';
+            echo '<td><strong>' . esc_html((string) $key) . '</strong><div class="emonks-subtle">Plan key moet stabiel blijven voor bestaande users.</div></td>';
             echo '<td><input class="regular-text" name="settings[plans][' . esc_attr((string) $key) . '][label]" value="' . esc_attr((string) ($plan['label'] ?? '')) . '" /></td>';
             echo '<td><input type="number" min="0" class="small-text" name="settings[plans][' . esc_attr((string) $key) . '][max_workspaces]" value="' . esc_attr((string) ($plan['max_workspaces'] ?? 0)) . '" /></td>';
             echo '<td><input type="number" step="0.01" min="0" class="small-text" name="settings[plans][' . esc_attr((string) $key) . '][price_monthly]" value="' . esc_attr((string) ($plan['price_monthly'] ?? 0)) . '" /></td>';
@@ -130,13 +146,14 @@ final class Admin
         $settings = get_option(Settings::OPTION_KEY, []);
         $flags = Features::globalFlags();
 
-        echo '<div class="wrap"><h1>Emonks SaaS - Features</h1>';
-        echo '<p class="emonks-muted">Activeer/deactiveer generieke capabilities platformbreed.</p>';
+        echo '<div class="wrap">';
+        $this->renderPageHeader('Emonks SaaS - Features', 'Activeer/deactiveer platform capabilities.', 'Feature flags zijn environment-breed. Gebruik planfeatures voor pakketverschillen en global flags voor operationele toggles.');
+
         $this->renderSettingsFormStart('features');
-        echo '<table class="form-table">';
+        echo '<table class="form-table emonks-form-table">';
         foreach ($flags as $flag => $enabled) {
             $checked = (bool) ($settings['feature_flags'][$flag] ?? $enabled);
-            echo '<tr><th scope="row">' . esc_html($flag) . '</th><td><label><input type="checkbox" name="settings[feature_flags][' . esc_attr($flag) . ']" value="1" ' . checked($checked, true, false) . ' /> Enabled</label></td></tr>';
+            echo '<tr><th scope="row">' . esc_html($flag) . '</th><td><label><input type="checkbox" name="settings[feature_flags][' . esc_attr($flag) . ']" value="1" ' . checked($checked, true, false) . ' /> Enabled</label><span class="description">Uitzetten forceert deze capability platformbreed naar false.</span></td></tr>';
         }
         echo '</table>';
         submit_button('Save Feature Flags');
@@ -144,18 +161,51 @@ final class Admin
         echo '</div>';
     }
 
+    public function renderServicesPage(): void
+    {
+        $services = Services::all();
+        echo '<div class="wrap">';
+        $this->renderPageHeader('Emonks SaaS - Services', 'Service registry en uitbreidbare modulecontracten.', 'Registreer service modules met labels, schema, capabilities, onboarding steps en policy metadata voor echte multi-SaaS inzetbaarheid.');
+
+        echo '<table class="widefat striped"><thead><tr><th>Service</th><th>Capabilities</th><th>Supported Features</th><th>Onboarding Steps</th><th>Policy</th></tr></thead><tbody>';
+        foreach ($services as $key => $service) {
+            $caps = implode(', ', (array) ($service['capabilities'] ?? []));
+            $features = implode(', ', (array) ($service['supported_features'] ?? []));
+            $steps = implode(', ', (array) ($service['onboarding_steps'] ?? []));
+            $policy = (string) ($service['policy'] ?? '');
+            echo '<tr>';
+            echo '<td><strong>' . esc_html((string) $key) . '</strong><div class="emonks-subtle">' . esc_html((string) (($service['labels']['singular'] ?? '') . ' / ' . ($service['labels']['plural'] ?? ''))) . '</div></td>';
+            echo '<td>' . esc_html($caps !== '' ? $caps : '-') . '</td>';
+            echo '<td>' . esc_html($features !== '' ? $features : '-') . '</td>';
+            echo '<td>' . esc_html($steps !== '' ? $steps : '-') . '</td>';
+            echo '<td>' . esc_html($policy !== '' ? $policy : '-') . '</td>';
+            echo '</tr>';
+        }
+        echo '</tbody></table>';
+
+        echo '<h2 style="margin-top:24px;">Implementatie tips</h2>';
+        echo '<ol><li>Maak per dienst een class die ServiceModuleInterface implementeert.</li><li>Gebruik settings_schema voor form rendering en validatie.</li><li>Definieer policy/onboarding_steps per dienst in de service definitie.</li></ol>';
+        echo '</div>';
+    }
+
     public function renderOnboardingPage(): void
     {
-        echo '<div class="wrap"><h1>Emonks SaaS - Onboarding UX</h1>';
-        echo '<p class="emonks-muted">Onboarding flows zijn ontworpen voor snelle first value: account > first workspace > billing > publish.</p>';
-        echo '<ol><li>Maak route templates thematisch service-proof.</li><li>Gebruik checklist-status in dashboard template context.</li><li>Toon helper content, voorbeelden en CTA’s op elk onboarding scherm.</li></ol>';
+        echo '<div class="wrap">';
+        $this->renderPageHeader('Emonks SaaS - Onboarding UX', 'Configureer first-value flow voor verschillende services.', 'Onboarding ondersteunt nu dynamische step evaluators en checklists via filters. Koppel stappen aan domeinevents voor automatische progressie.');
+
+        echo '<h2>Standaard flow</h2>';
+        echo '<ol><li>Account aangemaakt</li><li>Eerste workspace</li><li>Billing verbonden</li><li>Workspace gepubliceerd</li></ol>';
+        echo '<h2>Customizable hooks</h2>';
+        echo '<ul><li><code>emonks_onboarding_checklist</code></li><li><code>emonks_onboarding_step_evaluators</code></li><li><code>emonks_service_onboarding_steps</code></li></ul>';
         echo '</div>';
     }
 
     public function renderLogsPage(): void
     {
         $logs = get_option('emonks_saas_logs', []);
-        echo '<div class="wrap"><h1>Emonks SaaS - Logs</h1>';
+        echo '<div class="wrap">';
+        $this->renderPageHeader('Emonks SaaS - Logs', 'Snelle operationele feedback vanuit plugin events.', 'Gebruik logs voor korte termijn troubleshooting. Voor hoge volumes is externe logging of custom table aanbevolen.');
+
         if (! is_array($logs) || empty($logs)) {
             echo '<p>No logs available.</p></div>';
             return;
@@ -230,6 +280,14 @@ final class Admin
     private function renderKpiCard(string $label, string $value): void
     {
         echo '<div class="emonks-card"><div>' . esc_html($label) . '</div><div class="emonks-kpi">' . esc_html($value) . '</div></div>';
+    }
+
+    private function renderPageHeader(string $title, string $subtitle, string $tip): void
+    {
+        echo '<div class="emonks-header">';
+        echo '<div><h1>' . esc_html($title) . '</h1><p class="emonks-muted">' . esc_html($subtitle) . '</p></div>';
+        echo '<div class="emonks-tip"><strong>Tip</strong><br>' . esc_html($tip) . '</div>';
+        echo '</div>';
     }
 
     /** @return array<string,mixed> */

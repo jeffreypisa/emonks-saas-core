@@ -1,7 +1,14 @@
 {% extends "base.twig" %}
 
 {% block content %}
-<div class="container py-4 py-lg-5">
+<div class="container py-4 py-lg-5 emonks-account-shell">
+  {% if flash_messages %}
+    <div class="mb-3">
+      {% for key, message in flash_messages %}
+        <div class="alert {{ key ends with '_error' ? 'alert-danger' : (key ends with '_warning' ? 'alert-warning' : 'alert-info') }} mb-2">{{ message }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
   <div class="d-flex flex-wrap gap-3 justify-content-between align-items-center mb-4">
     <div>
       <h1 class="h3 mb-1">{{ labels.plural|default('Items') }}</h1>
@@ -28,21 +35,25 @@
         </div>
         <div class="col-12 col-md-6">
           <label class="form-label" for="ws_service">Service type</label>
-          <input id="ws_service" name="service_type" class="form-control" placeholder="generic">
+          <select id="ws_service" name="service_type" class="form-select">
+            {% for service_key, service in service_types %}
+              <option value="{{ service_key }}">{{ service.labels.singular|default(service_key|capitalize) }}</option>
+            {% endfor %}
+          </select>
         </div>
         <div class="col-12 col-md-6">
           <label class="form-label" for="ws_slug">Public slug</label>
           <input id="ws_slug" name="public_slug" class="form-control" placeholder="mijn-workspace">
+          <div class="form-text">We checken automatisch of de slug beschikbaar is.</div>
         </div>
         <div class="col-12 col-md-6">
           <label class="form-label" for="ws_status">Status</label>
           <select id="ws_status" name="workspace_status" class="form-select">
-            <option value="draft">Draft</option>
-            <option value="active">Active</option>
-            <option value="suspended">Suspended</option>
-            <option value="archived">Archived</option>
-            <option value="published">Published</option>
+            {% for key, label in workspace_statuses %}
+              <option value="{{ key }}">{{ label }}</option>
+            {% endfor %}
           </select>
+          <div class="form-text">Published vereist afgeronde onboarding en actieve subscription.</div>
         </div>
         <div class="col-12">
           <button class="btn btn-primary" type="submit">Workspace opslaan</button>
@@ -72,7 +83,8 @@
                 <tr>
                   <td>{{ workspace.post_title }}</td>
                   <td>{{ function('emonks_get_workspace_meta', workspace.ID, 'service_type', 'generic') }}</td>
-                  <td><span class="badge text-bg-secondary">{{ function('emonks_get_workspace_status', workspace.ID) }}</span></td>
+                  {% set ws_status = function('emonks_get_workspace_status', workspace.ID) %}
+                  <td><span class="badge {{ function('emonks_get_workspace_status_badge_class', ws_status) }}">{{ function('emonks_get_workspace_status_label', ws_status) }}</span></td>
                   <td>
                     {% set slug = function('emonks_get_workspace_meta', workspace.ID, 'public_slug', '') %}
                     {% if slug %}

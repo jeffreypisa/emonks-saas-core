@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Emonks\SaasCore\Services;
 
+use Emonks\SaasCore\ServiceModuleInterface;
+
 /**
  * Class: GuestGuideService
  * Purpose: Example service registration implementation.
@@ -11,11 +13,16 @@ namespace Emonks\SaasCore\Services;
  * Hooks: none.
  * Architecture Role: Reference implementation for future service modules.
  */
-final class GuestGuideService
+final class GuestGuideService implements ServiceModuleInterface
 {
-    public function register(): void
+    public function key(): string
     {
-        emonks_register_service_type('guest_guide', [
+        return 'guest_guide';
+    }
+
+    public function definition(): array
+    {
+        return [
             'labels' => ['singular' => 'Item', 'plural' => 'Items'],
             'routes' => ['index' => 'workspaces'],
             'templates' => ['dashboard_card' => 'services/guest-guide-card.twig'],
@@ -28,6 +35,11 @@ final class GuestGuideService
             'dashboard_cards' => [],
             'capabilities' => ['read', 'edit'],
             'supported_features' => ['public_pages', 'qr_codes', 'translations'],
-        ]);
+        ];
+    }
+
+    public function register(): void
+    {
+        emonks_register_service_type($this->key(), $this->definition());
     }
 }

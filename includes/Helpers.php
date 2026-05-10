@@ -31,6 +31,29 @@ function emonks_get_setting(string $key, $default = null)
     return $value;
 }
 
+function emonks_get_setting_with_overrides(string $key, $default = null, string $serviceType = '', int $workspaceId = 0)
+{
+    $serviceType = sanitize_key($serviceType);
+    $workspaceId = absint((string) $workspaceId);
+
+    if ($workspaceId > 0) {
+        $workspaceSettingsRaw = emonks_get_workspace_meta($workspaceId, 'settings', '{}');
+        $workspaceSettings = json_decode((string) $workspaceSettingsRaw, true);
+        if (is_array($workspaceSettings) && array_key_exists($key, $workspaceSettings)) {
+            return $workspaceSettings[$key];
+        }
+    }
+
+    if ($serviceType !== '') {
+        $serviceSettings = emonks_get_setting('services.' . $serviceType, []);
+        if (is_array($serviceSettings) && array_key_exists($key, $serviceSettings)) {
+            return $serviceSettings[$key];
+        }
+    }
+
+    return emonks_get_setting($key, $default);
+}
+
 function emonks_update_setting(string $key, $value): bool
 {
     $settings = get_option(Emonks\SaasCore\Settings::OPTION_KEY, []);
@@ -291,6 +314,105 @@ function emonks_get_workspace_by_slug(string $slug): int
     ]);
 
     return ! empty($query->posts) ? (int) $query->posts[0] : 0;
+}
+
+function emonks_is_workspace_slug_available(string $slug, int $excludeWorkspaceId = 0): bool
+{
+    $slug = sanitize_title($slug);
+    if ($slug === '') {
+        return false;
+    }
+
+    $query = new WP_Query([
+        'post_type' => 'emonks_workspace',
+        'post_status' => 'publish',
+        'posts_per_page' => 1,
+        'fields' => 'ids',
+        'post__not_in' => $excludeWorkspaceId > 0 ? [$excludeWorkspaceId] : [],
+        'meta_query' => [
+            [
+                'key' => 'public_slug',
+                'value' => $slug,
+                'compare' => '=',
+            ],
+        ],
+    ]);
+
+    return empty($query->posts);
+}
+
+/** @return array<int,string> */
+function emonks_suggest_workspace_slugs(string $seed, int $excludeWorkspaceId = 0, int $limit = 3): array
+{
+    $base = sanitize_title($seed);
+    if ($base === '') {
+        $base = 'workspace';
+    }
+
+    $suggestions = [];
+    $counter = 0;
+    while (count($suggestions) < $limit && $counter < 20) {
+        $candidate = $counter === 0 ? $base : $base . '-' . ($counter + 1);
+        if (emonks_is_workspace_slug_available($candidate, $excludeWorkspaceId)) {
+            $suggestions[] = $candidate;
+        }
+        $counter++;
+    }
+
+    return $suggestions;
+}
+
+function emonks_user_can_publish_workspace(int $userId): bool
+{
+    if (user_can($userId, 'manage_options')) {
+        return true;
+    }
+
+    return emonks_user_has_active_subscription($userId) && emonks_user_completed_onboarding($userId);
+}
+
+/** @return array<int,string> */
+function emonks_get_service_onboarding_steps(string $serviceType): array
+{
+    $service = Services::get($serviceType);
+    $steps = $service['onboarding_steps'] ?? [];
+    if (! is_array($steps)) {
+        $steps = [];
+    }
+
+    $normalized = array_values(array_filter(array_map(static fn($s) => sanitize_key((string) $s), $steps)));
+    return apply_filters('emonks_service_onboarding_steps', $normalized, $serviceType);
+}
+
+/** @return array<string,mixed> */
+function emonks_get_service_policy(string $serviceType): array
+{
+    $service = Services::get($serviceType);
+    $policy = [
+        'class' => sanitize_text_field((string) ($service['policy'] ?? '')),
+        'can_publish_requires_billing' => true,
+        'can_publish_requires_onboarding' => true,
+    ];
+
+    return apply_filters('emonks_service_policy', $policy, $serviceType, $service);
+}
+
+function emonks_get_workspace_status_label(string $status): string
+{
+    $all = WorkspaceStatuses::all();
+    $status = sanitize_key($status);
+    return (string) ($all[$status] ?? ucfirst($status));
+}
+
+function emonks_get_workspace_status_badge_class(string $status): string
+{
+    return match (sanitize_key($status)) {
+        'published' => 'emonks-badge-published',
+        'active' => 'emonks-badge-active',
+        'suspended' => 'emonks-badge-suspended',
+        'archived' => 'emonks-badge-archived',
+        default => 'emonks-badge-draft',
+    };
 }
 
 function emonks_user_completed_onboarding(?int $userId = null): bool

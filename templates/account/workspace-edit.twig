@@ -1,7 +1,14 @@
 {% extends "base.twig" %}
 
 {% block content %}
-<div class="container py-4 py-lg-5">
+<div class="container py-4 py-lg-5 emonks-account-shell">
+  {% if flash_messages %}
+    <div class="mb-3">
+      {% for key, message in flash_messages %}
+        <div class="alert {{ key ends with '_error' ? 'alert-danger' : (key ends with '_warning' ? 'alert-warning' : 'alert-info') }} mb-2">{{ message }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
   <div class="row g-4">
     <div class="col-12 col-lg-8">
       <div class="card border-0 shadow-sm">
@@ -16,13 +23,18 @@
             </div>
             <div class="col-12 col-md-6">
               <label class="form-label" for="ws_service">Service type</label>
-              <input id="ws_service" name="service_type" class="form-control" value="{{ function('emonks_get_workspace_meta', workspace.ID, 'service_type', 'generic') }}">
+              {% set current_service = function('emonks_get_workspace_meta', workspace.ID, 'service_type', 'generic') %}
+              <select id="ws_service" name="service_type" class="form-select">
+                {% for service_key, service in service_types %}
+                  <option value="{{ service_key }}" {{ service_key == current_service ? 'selected' : '' }}>{{ service.labels.singular|default(service_key|capitalize) }}</option>
+                {% endfor %}
+              </select>
             </div>
             <div class="col-12 col-md-6">
               <label class="form-label" for="ws_status">Status</label>
               {% set current_status = function('emonks_get_workspace_status', workspace.ID) %}
               <select id="ws_status" name="workspace_status" class="form-select">
-                {% for key, label in {'draft':'Draft','active':'Active','suspended':'Suspended','archived':'Archived','published':'Published'} %}
+                {% for key, label in workspace_statuses %}
                   <option value="{{ key }}" {{ key == current_status ? 'selected' : '' }}>{{ label }}</option>
                 {% endfor %}
               </select>
@@ -30,6 +42,7 @@
             <div class="col-12">
               <label class="form-label" for="ws_slug">Public slug</label>
               <input id="ws_slug" name="public_slug" class="form-control" value="{{ function('emonks_get_workspace_meta', workspace.ID, 'public_slug', '') }}">
+              <div class="form-text">Bij conflict krijg je direct suggesties voor alternatieve slugs.</div>
             </div>
             <div class="col-12">
               <label class="form-label" for="ws_settings">Settings JSON</label>

@@ -15,6 +15,13 @@
 - Admin Settings omgeving
 - Custom domain architectuurlaag
 
+## Extensibility architectuur (nieuw)
+- `ServiceModuleInterface` voor service modules
+- `BillingProviderInterface` voor verwisselbare billing backends
+- `StripeBillingProvider` als standaard implementatie
+- Service-definities met `onboarding_steps` en `policy`
+- Helper override-lagen via `emonks_get_setting_with_overrides()`
+
 ## Custom Domain concept
 - Hostname mapping opslag
 - Ownership verification token

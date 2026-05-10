@@ -1,17 +1,14 @@
 # Feature Flags
 
-Globale flags via `emonks_feature_flags` filter:
-- `public_pages`
-- `qr_codes`
-- `custom_domains`
-- `translations`
+Feature flags zijn globale toggles voor platformgedrag.
 
-Admin beheer:
-- WP Admin > Emonks SaaS > Features
-- Niet-aangevinkte flags worden expliciet als `false` opgeslagen.
-- Aangevinkte flags worden als `true` opgeslagen.
+## Opslaggedrag
+- Niet-aangevinkt = expliciet `false`
+- Aangevinkt = `true`
 
-Helpers:
-- `emonks_feature_enabled()`
-- `emonks_plan_has_feature()`
-- `emonks_service_supports()`
+## Gebruik
+- Combineer global feature flags met planfeatures
+- Gebruik service capabilities voor service-specifieke granulariteit
+
+## Admin UX
+Tabblad Features bevat uitleg over impact van uitschakelen per flag.

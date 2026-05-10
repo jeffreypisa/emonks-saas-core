@@ -32,6 +32,9 @@ final class Dashboard
         $context['can_create_workspace'] = emonks_user_can_create_workspace($userId);
         $context['billing_active'] = emonks_user_has_active_subscription($userId);
         $context['workspace_status_counts'] = emonks_get_workspace_status_counts($userId);
+        $context['service_types'] = Services::all();
+        $context['workspace_statuses'] = WorkspaceStatuses::all();
+        $context['next_action'] = $this->resolveNextAction($userId, $context);
         $context['admin_post'] = [
             'workspace_save' => emonks_admin_post_url('emonks_workspace_save'),
             'billing_checkout' => emonks_admin_post_url('emonks_billing_checkout'),
@@ -58,7 +61,37 @@ final class Dashboard
             $context['workspace'] = get_post($workspaceId);
         }
 
+        if ($route === 'account_billing') {
+            $context['billing_preview'] = [
+                'plan' => sanitize_key((string) ($_GET['preview_plan'] ?? '')),
+                'cycle' => sanitize_key((string) ($_GET['preview_cycle'] ?? '')),
+                'is_upgrade' => (string) ($_GET['preview_upgrade'] ?? '0') === '1',
+            ];
+        }
+
         emonks_render_template($template, $context);
+    }
+
+    /** @param array<string,mixed> $context */
+    private function resolveNextAction(int $userId, array $context): array
+    {
+        if ((int) ($context['workspace_count'] ?? 0) === 0) {
+            return ['label' => 'Maak je eerste workspace', 'url' => emonks_get_account_url('workspaces'), 'variant' => 'primary'];
+        }
+
+        if (! emonks_user_has_active_subscription($userId)) {
+            return ['label' => 'Activeer billing', 'url' => emonks_get_account_url('billing'), 'variant' => 'warning'];
+        }
+
+        if (! emonks_user_completed_onboarding($userId)) {
+            return ['label' => 'Rond onboarding af', 'url' => emonks_get_account_url('onboarding'), 'variant' => 'info'];
+        }
+
+        if (! emonks_user_has_published_workspace($userId)) {
+            return ['label' => 'Publiceer een workspace', 'url' => emonks_get_account_url('workspaces'), 'variant' => 'success'];
+        }
+
+        return ['label' => 'Alles staat goed', 'url' => emonks_get_account_url(), 'variant' => 'neutral'];
     }
 
     public function renderPublicWorkspace(): void

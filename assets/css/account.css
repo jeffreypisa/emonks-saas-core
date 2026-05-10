@@ -1,1 +1,59 @@
-/* Intentionally minimal: styling belongs to active theme. */
+:root {
+  --emonks-color-ink: #1f2933;
+  --emonks-color-muted: #6b7280;
+  --emonks-color-line: #dbe2ea;
+  --emonks-color-bg-soft: #f7fafc;
+  --emonks-color-focus: #0b6bcb;
+  --emonks-color-success: #1f8a4c;
+  --emonks-color-warning: #b26a00;
+  --emonks-color-danger: #b42318;
+}
+
+.emonks-account-shell .card {
+  border-radius: 14px;
+}
+
+.emonks-account-shell .form-control:focus,
+.emonks-account-shell .form-select:focus {
+  border-color: var(--emonks-color-focus);
+  box-shadow: 0 0 0 3px rgba(11, 107, 203, 0.15);
+}
+
+.emonks-account-shell .form-text {
+  color: var(--emonks-color-muted);
+}
+
+.emonks-badge-draft,
+.emonks-badge-active,
+.emonks-badge-suspended,
+.emonks-badge-archived,
+.emonks-badge-published {
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 0.35rem 0.55rem;
+}
+
+.emonks-badge-draft {
+  background: #eef2f7;
+  color: #3e4c59;
+}
+
+.emonks-badge-active {
+  background: #e7f2ff;
+  color: #0b6bcb;
+}
+
+.emonks-badge-suspended {
+  background: #fff4de;
+  color: var(--emonks-color-warning);
+}
+
+.emonks-badge-archived {
+  background: #f1f5f9;
+  color: #52606d;
+}
+
+.emonks-badge-published {
+  background: #e9f8ef;
+  color: var(--emonks-color-success);
+}

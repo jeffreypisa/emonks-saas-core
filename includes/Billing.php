@@ -26,15 +26,15 @@ final class Billing
             return ['ok' => true, 'test_mode' => true];
         }
 
-        $stripe = Plugin::instance()->get('stripe');
-        if (! $stripe instanceof Stripe) {
+        $provider = $this->resolveProvider();
+        if (! $provider instanceof BillingProviderInterface) {
             return ['error' => 'stripe_unavailable'];
         }
 
         $success = (string) emonks_get_setting('billing.success_url', emonks_get_account_url('billing'));
         $cancel = (string) emonks_get_setting('billing.cancel_url', emonks_get_account_url('billing'));
 
-        return $stripe->createCheckoutSession(get_current_user_id(), $plan, $success, $cancel, $cycle);
+        return $provider->createCheckoutSession(get_current_user_id(), $plan, $success, $cancel, $cycle);
     }
 
     public function handleCheckout(): void
@@ -73,14 +73,14 @@ final class Billing
 
         check_admin_referer('emonks_billing_portal', 'emonks_nonce');
 
-        $stripe = Plugin::instance()->get('stripe');
-        if (! $stripe instanceof Stripe) {
+        $provider = $this->resolveProvider();
+        if (! $provider instanceof BillingProviderInterface) {
             emonks_flash_add('billing_error', 'Stripe unavailable.');
             wp_safe_redirect(emonks_get_account_url('billing'));
             exit;
         }
 
-        $result = $stripe->createCustomerPortalSession(get_current_user_id(), emonks_get_account_url('billing'));
+        $result = $provider->createCustomerPortalSession(get_current_user_id(), emonks_get_account_url('billing'));
         if (! empty($result['url'])) {
             wp_safe_redirect((string) $result['url']);
             exit;
@@ -119,6 +119,17 @@ final class Billing
         }
 
         $isUpgrade = $this->planRank($targetPlan) > $this->planRank($currentPlan);
+        $confirmed = isset($_POST['confirm_change']) && (string) $_POST['confirm_change'] === '1';
+        if (! $confirmed) {
+            $previewUrl = add_query_arg([
+                'preview_plan' => $targetPlan,
+                'preview_cycle' => $targetCycle,
+                'preview_upgrade' => $isUpgrade ? '1' : '0',
+            ], emonks_get_account_url('billing'));
+            emonks_flash_add('billing_info', 'Review plan change details and confirm to continue.');
+            wp_safe_redirect($previewUrl);
+            exit;
+        }
 
         if (emonks_is_billing_test_mode()) {
             update_user_meta($userId, 'emonks_subscription_plan', $targetPlan);
@@ -129,14 +140,14 @@ final class Billing
             exit;
         }
 
-        $stripe = Plugin::instance()->get('stripe');
-        if (! $stripe instanceof Stripe) {
+        $provider = $this->resolveProvider();
+        if (! $provider instanceof BillingProviderInterface) {
             emonks_flash_add('billing_error', 'Stripe unavailable.');
             wp_safe_redirect(emonks_get_account_url('billing'));
             exit;
         }
 
-        $result = $stripe->changeSubscriptionPlan($userId, $targetPlan, $isUpgrade, $targetCycle);
+        $result = $provider->changeSubscriptionPlan($userId, $targetPlan, $isUpgrade, $targetCycle);
         if (! empty($result['error'])) {
             emonks_flash_add('billing_error', 'Unable to change plan in Stripe.');
             wp_safe_redirect(emonks_get_account_url('billing'));
@@ -154,5 +165,17 @@ final class Billing
         $order = array_keys(Plans::getPlans());
         $index = array_search($plan, $order, true);
         return is_int($index) ? $index : 0;
+    }
+
+    private function resolveProvider(): ?BillingProviderInterface
+    {
+        $stripe = Plugin::instance()->get('stripe');
+        if (! $stripe instanceof Stripe) {
+            return null;
+        }
+
+        $provider = new StripeBillingProvider($stripe);
+        $custom = apply_filters('emonks_billing_provider', $provider);
+        return $custom instanceof BillingProviderInterface ? $custom : $provider;
     }
 }

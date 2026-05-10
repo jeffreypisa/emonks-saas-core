@@ -6,27 +6,16 @@
 
 ## 2. Plans & pricing
 `Plans::getPlans()` combineert defaults met settings overrides.
-Per plan:
-- `label`
-- `max_workspaces`
-- `enabled_features`
-- `stripe_price_constant`
-- `stripe_price_id_monthly`
-- `stripe_price_id_yearly`
-- `price_monthly`
-- `price_yearly`
-- `currency`
 
-## 3. Billing cycle model
-Cycle in gebruik:
-- `monthly`
-- `yearly`
+## 3. Billing provider model (nieuw)
+`Billing` resolveert een provider via:
+- standaard: `StripeBillingProvider`
+- override: filter `emonks_billing_provider`
 
-User meta:
-- `emonks_subscription_cycle`
-
-Stripe metadata:
-- `metadata[cycle]`
+Contract via `BillingProviderInterface`:
+- `createCheckoutSession()`
+- `createCustomerPortalSession()`
+- `changeSubscriptionPlan()`
 
 ## 4. Upgrade/downgrade
 Endpoint:
@@ -34,17 +23,21 @@ Endpoint:
 
 Flow:
 - validate nonce/login/target plan
+- preview + confirm stap
 - detect upgrade vs downgrade via planrank
 - test mode: lokale update
-- live mode: Stripe subscription update met cycle price-id
+- live mode: provider subscription update
 
-## 5. Feature flags save fix
-Probleem opgelost:
-- unchecked checkboxes sturen geen POST
+## 5. Service contract
+Service definitie wordt genormaliseerd en ondersteunt extra velden:
+- `onboarding_steps`
+- `policy`
 
-Implementatie:
-- bij `tab=features` eerst alle flags op false initialiseren
-- daarna submitted flags op true zetten
+## 6. Settings overrides
+Helper:
+- `emonks_get_setting_with_overrides($key, $default, $serviceType, $workspaceId)`
 
-Resultaat:
-- custom_domains/translations kunnen betrouwbaar uitgezet worden.
+Prioriteit:
+- workspace settings
+- service settings
+- globale plugin settings

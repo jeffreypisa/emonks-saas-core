@@ -1,6 +1,6 @@
 # Billing
 
-Emonks SaaS Core gebruikt Stripe als source of truth.
+Emonks SaaS Core gebruikt provider abstractie met Stripe als default source of truth.
 
 ## Ondersteunde flows
 - Customer create/reuse
@@ -9,21 +9,21 @@ Emonks SaaS Core gebruikt Stripe als source of truth.
 - Upgrade/downgrade plan flow
 - Billing cycle: monthly/yearly
 
-## Test mode
-Beschikbaar via:
-- WP Admin > Emonks SaaS > Billing > Test mode
-
-Gedrag:
-- Checkout en planwijzigingen worden lokaal gesimuleerd
-- Geen live Stripe mutaties
+## Provider model
+- Interface: `BillingProviderInterface`
+- Default: `StripeBillingProvider`
+- Override via `emonks_billing_provider`
 
 ## Plan change gedrag
 - Actieve subscription: `change plan` flow
 - Geen actieve subscription: `checkout` flow
-- Upgrade/downgrade bepaald op planvolgorde
-- Cycle wordt meegenomen (`monthly` of `yearly`)
+- Plan change bevat eerst preview en daarna expliciete confirm submit
 
-## Webhook events
+## Test mode
+- Checkout en planwijzigingen worden lokaal gesimuleerd
+- Geen live provider mutaties
+
+## Webhook events (Stripe)
 - `checkout.session.completed`
 - `customer.subscription.created`
 - `customer.subscription.updated`

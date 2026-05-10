@@ -1,7 +1,14 @@
 {% extends "base.twig" %}
 
 {% block content %}
-<div class="container py-4 py-lg-5">
+<div class="container py-4 py-lg-5 emonks-account-shell">
+  {% if flash_messages %}
+    <div class="mb-3">
+      {% for key, message in flash_messages %}
+        <div class="alert alert-info mb-2">{{ message }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
   <div class="card border-0 shadow-sm mb-4">
     <div class="card-body p-4">
       <h1 class="h4 mb-2">Onboarding</h1>
@@ -22,7 +29,7 @@
               <h2 class="h6 text-capitalize mb-0">{{ step|replace({'_':' '}) }}</h2>
               <span class="badge {{ done ? 'text-bg-success' : 'text-bg-secondary' }}">{{ done ? 'Done' : 'Open' }}</span>
             </div>
-            <p class="small text-muted flex-grow-1">Voltooi deze stap om je account production-ready te maken.</p>
+            <p class="small text-muted flex-grow-1">Deze stap wordt automatisch voltooid zodra de onderliggende actie gebeurt, of je kunt hem hier handmatig afronden.</p>
             {% if not done %}
               <form method="post" action="{{ admin_post.onboarding_step }}">
                 {{ function('wp_nonce_field', 'emonks_onboarding_step', 'emonks_nonce') }}

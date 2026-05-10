@@ -11,4 +11,5 @@ TemplateLoader zoekt:
 1. Actief theme: `/templates/...`
 2. Plugin fallback: `/templates/...`
 
-Zo blijft de UI volledig theme-owned.
+## UX fallback
+Plugin fallback templates bevatten nu uitgebreidere UX (feedback, status badges, hints), maar theme blijft leidend.

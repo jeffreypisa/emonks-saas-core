@@ -1,7 +1,7 @@
 {% extends "base.twig" %}
 
 {% block content %}
-<div class="container py-4 py-lg-5">
+<div class="container py-4 py-lg-5 emonks-account-shell">
   <div class="row g-4 align-items-stretch">
     <div class="col-12 col-lg-8">
       <div class="card shadow-sm border-0 h-100">
@@ -9,6 +9,11 @@
           <p class="text-uppercase small text-muted mb-2">Account</p>
           <h1 class="h3 mb-3">Welkom, {{ current_user.display_name ?: current_user.user_email }}</h1>
           <p class="text-muted mb-4">Beheer hier je workspaces, subscription en onboarding voortgang vanuit één centrale omgeving.</p>
+          {% if next_action %}
+            <div class="alert {{ next_action.variant == 'warning' ? 'alert-warning' : (next_action.variant == 'success' ? 'alert-success' : 'alert-info') }} mb-3">
+              Volgende stap: <a href="{{ next_action.url }}">{{ next_action.label }}</a>
+            </div>
+          {% endif %}
           <div class="d-flex flex-wrap gap-2">
             <a class="btn btn-primary" href="/{{ routes.account }}/{{ routes.workspaces }}/">Naar workspaces</a>
             <a class="btn btn-outline-secondary" href="/{{ routes.account }}/{{ routes.billing }}/">Beheer billing</a>
@@ -46,7 +51,7 @@
       <div class="col-6 col-lg-2">
         <div class="card border-0 shadow-sm h-100">
           <div class="card-body py-3 text-center">
-            <div class="small text-muted text-uppercase">{{ status }}</div>
+            <div class="small text-muted text-uppercase">{{ function('emonks_get_workspace_status_label', status) }}</div>
             <div class="h4 mb-0">{{ count }}</div>
           </div>
         </div>

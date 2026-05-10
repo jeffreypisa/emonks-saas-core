@@ -1,17 +1,17 @@
 # Functioneel Ontwerp - Emonks SaaS Core
 
 ## 1. Doel en Scope
-Emonks SaaS Core is een generieke WordPress plugin die SaaS-kernlogica levert, terwijl het actieve theme volledig eigenaar blijft van presentatie, UX, layouts en styling.
+Emonks SaaS Core is een generieke WordPress plugin die SaaS-kernlogica levert, terwijl het actieve theme eigenaar blijft van presentatie en branding.
 
 ## 2. Belangrijkste functionele onderdelen
 - Account/auth/routing
 - Workspace lifecycle en ownership
 - Plans, pricing en limieten
-- Billing met Stripe + test mode
-- Upgrade/downgrade planlogica
+- Billing met provider abstractie (default Stripe)
+- Upgrade/downgrade planlogica met confirm-preview
 - Feature flags
-- Onboarding
-- REST basis
+- Dynamische onboarding
+- REST basis + validatie
 - Logging en admin beheer
 
 ## 3. Planbeheer
@@ -26,41 +26,38 @@ In WP Admin > Emonks SaaS > Plans zijn plannen configureerbaar:
 - stripe_price_id_monthly
 - stripe_price_id_yearly
 
-Theme kan hiermee direct werken via helpers:
-- `emonks_get_plans()`
-- `emonks_get_plan($plan)`
-- `emonks_get_current_user_plan()`
-- `emonks_get_plan_limit($plan, 'max_workspaces')`
-- `emonks_get_current_user_workspace_count()`
+## 4. Servicebeheer
+In WP Admin > Emonks SaaS > Services zie je service-registry metadata:
+- capabilities
+- supported features
+- onboarding steps
+- policy referentie
 
-## 4. Billing en cycles
-In WP Admin > Emonks SaaS > Billing:
-- billing test mode
-- success/cancel URL settings
-
+## 5. Billing en cycles
 Ondersteunde cycles:
 - monthly
 - yearly
 
 Gedrag:
 - zonder actieve subscription: checkout flow
-- met actieve subscription: change plan flow (upgrade/downgrade)
+- met actieve subscription: change plan flow
+- plan change gebruikt eerst preview, daarna bevestiging
 
-## 5. Feature flags gedrag
+## 6. Feature flags gedrag
 In WP Admin > Emonks SaaS > Features:
 - Niet-aangevinkt = expliciet `false`
 - Aangevinkt = `true`
 
-Dit voorkomt dat uitgezette flags onbedoeld terug op actief springen.
+## 7. Onboarding
+Stappen zijn filterbaar en evaluator-driven:
+- `emonks_onboarding_checklist`
+- `emonks_onboarding_step_evaluators`
 
-## 6. Template en UX
-Plugin biedt volledige fallback templates voor alle account/public routes.
-Theme overrides blijven leidend.
-
-## 7. Security
+## 8. Security
 - Nonce checks
 - Sanitization
 - Ownership checks
 - Capability checks
+- REST permission callbacks
 - Webhook signature verify
 - Idempotency

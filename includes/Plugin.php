@@ -47,6 +47,7 @@ final class Plugin
     public function boot(): void
     {
         $this->loadDependencies();
+        add_action('init', [$this, 'loadTextDomain']);
         TimberBridge::bootstrap();
         $this->registerServices();
 
@@ -57,6 +58,11 @@ final class Plugin
         }
 
         do_action('emonks_saas_core_booted', $this);
+    }
+
+    public function loadTextDomain(): void
+    {
+        load_plugin_textdomain('emonks-saas-core', false, dirname(plugin_basename(EMONKS_SAAS_CORE_FILE)) . '/languages');
     }
 
     /**
@@ -86,6 +92,9 @@ final class Plugin
             'Stripe.php',
             'Webhooks.php',
             'Services.php',
+            'ServiceModuleInterface.php',
+            'BillingProviderInterface.php',
+            'StripeBillingProvider.php',
             'Features.php',
             'Settings.php',
             'Admin.php',
