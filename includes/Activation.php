@@ -24,6 +24,8 @@ final class Activation
     {
         add_role('emonks_customer', 'Emonks Customer', ['read' => true]);
         Workspaces::registerPostType();
+        Catalog::registerPlanPostType();
+        Catalog::registerTaxonomies();
         Routes::registerRewriteRules();
         flush_rewrite_rules();
     }

@@ -1,43 +1,24 @@
 # Technisch Ontwerp - Emonks SaaS Core
 
-## 1. Runtime
-- Plugin bootstrap -> dependency load -> TimberBridge -> service boot
-- Timber 2 via Composer (plugin vendor of theme vendor fallback)
+## 1. Catalogus architectuur
+Component: `Catalog`
+- registreert `emonks_plan` post type
+- registreert `emonks_feature` taxonomie
+- registreert `emonks_service` taxonomie
+- beheert plan-meta via metabox
+- beheert service `supported_features` via term-meta velden
 
-## 2. Plans & pricing
-`Plans::getPlans()` combineert defaults met settings overrides.
+## 2. Plan data source
+`Plans::getPlans()` leest uitsluitend uit plan catalogus (`emonks_plan` + tax relaties).
 
-## 3. Billing provider model (nieuw)
-`Billing` resolveert een provider via:
-- standaard: `StripeBillingProvider`
-- override: filter `emonks_billing_provider`
+## 3. Service runtime
+`Services` registreert service-termen uit `emonks_service`.
+Per service wordt `supported_features` uit term meta geladen.
 
-Contract via `BillingProviderInterface`:
-- `createCheckoutSession()`
-- `createCustomerPortalSession()`
-- `changeSubscriptionPlan()`
+## 4. Feature-availability helper
+`emonks_feature_available_for_service_and_plan($serviceType, $plan, $feature)`
 
-## 4. Upgrade/downgrade
-Endpoint:
-- `admin_post_emonks_billing_change_plan`
-
-Flow:
-- validate nonce/login/target plan
-- preview + confirm stap
-- detect upgrade vs downgrade via planrank
-- test mode: lokale update
-- live mode: provider subscription update
-
-## 5. Service contract
-Service definitie wordt genormaliseerd en ondersteunt extra velden:
-- `onboarding_steps`
-- `policy`
-
-## 6. Settings overrides
-Helper:
-- `emonks_get_setting_with_overrides($key, $default, $serviceType, $workspaceId)`
-
-Prioriteit:
-- workspace settings
-- service settings
-- globale plugin settings
+Logica:
+- `emonks_service_supports(...)`
+- `emonks_plan_has_feature(...)`
+- `emonks_feature_enabled(...)`

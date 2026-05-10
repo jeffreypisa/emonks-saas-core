@@ -20,12 +20,22 @@ final class Features
     /** @return array<string,bool> */
     public static function globalFlags(): array
     {
-        $defaults = [
-            'public_pages' => true,
-            'qr_codes' => true,
-            'custom_domains' => false,
-            'translations' => false,
-        ];
+        $defaults = [];
+        if (taxonomy_exists('emonks_feature')) {
+            $terms = get_terms([
+                'taxonomy' => 'emonks_feature',
+                'hide_empty' => false,
+            ]);
+
+            if (is_array($terms)) {
+                foreach ($terms as $term) {
+                    if (! $term instanceof \WP_Term) {
+                        continue;
+                    }
+                    $defaults[sanitize_key($term->slug)] = true;
+                }
+            }
+        }
 
         return apply_filters('emonks_feature_flags', $defaults);
     }

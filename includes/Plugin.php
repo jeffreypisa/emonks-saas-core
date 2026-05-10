@@ -91,6 +91,7 @@ final class Plugin
             'Billing.php',
             'Stripe.php',
             'Webhooks.php',
+            'Catalog.php',
             'Services.php',
             'ServiceModuleInterface.php',
             'BillingProviderInterface.php',
@@ -109,8 +110,6 @@ final class Plugin
         foreach ($files as $file) {
             require_once EMONKS_SAAS_CORE_PATH . 'includes/' . $file;
         }
-
-        require_once EMONKS_SAAS_CORE_PATH . 'services/GuestGuideService.php';
     }
 
     private function registerServices(): void
@@ -132,6 +131,7 @@ final class Plugin
             'billing' => new Billing(),
             'stripe' => new Stripe(),
             'webhooks' => new Webhooks(),
+            'catalog' => new Catalog(),
             'emails' => new Emails(),
             'logger' => new Logger(),
             'onboarding' => new Onboarding(),

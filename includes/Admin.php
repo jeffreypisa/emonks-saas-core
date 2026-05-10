@@ -116,47 +116,66 @@ final class Admin
     {
         $plans = Plans::getPlans();
         echo '<div class="wrap">';
-        $this->renderPageHeader('Emonks SaaS - Plans', 'Beheer labels, limieten, pricing en planfeatures.', 'Planconfiguratie vormt de basis voor workspace-limieten, publish-gates en feature toegang. Houd volgorde en naming consistent.');
+        $this->renderPageHeader('Emonks SaaS - Plans', 'Beheer plannen als losse entiteiten en koppel features/services via taxonomieen.', 'Gebruik de native editor om plannen aan te maken. Koppel daarna Features en Services zoals tags/categorieen.');
 
-        $this->renderSettingsFormStart('plans');
-        echo '<table class="widefat striped"><thead><tr><th>Plan key</th><th>Label</th><th>Max workspaces</th><th>Prijs p/m</th><th>Prijs p/j</th><th>Valuta</th><th>Features (comma separated)</th><th>Stripe Price Constant</th><th>Stripe Price ID Monthly</th><th>Stripe Price ID Yearly</th></tr></thead><tbody>';
+        echo '<p><a class="button button-primary" href="' . esc_url(admin_url('post-new.php?post_type=emonks_plan')) . '">Nieuw plan aanmaken</a> ';
+        echo '<a class="button" href="' . esc_url(admin_url('edit.php?post_type=emonks_plan')) . '">Planoverzicht openen</a></p>';
+        echo '<p class="emonks-muted">Relaties: Plan <-> Features en Plan <-> Services. Deze koppelingen worden direct gebruikt door billing, workspace limits en feature checks.</p>';
+
+        echo '<h2 style="margin-top:20px;">Actieve Plan Matrix</h2>';
+        echo '<table class="widefat striped"><thead><tr><th>Plan key</th><th>Label</th><th>Max workspaces</th><th>Prijs p/m</th><th>Prijs p/j</th><th>Valuta</th><th>Features</th><th>Services</th><th>Stripe Monthly ID</th><th>Stripe Yearly ID</th></tr></thead><tbody>';
         foreach ($plans as $key => $plan) {
             $features = is_array($plan['enabled_features'] ?? null) ? implode(',', $plan['enabled_features']) : '';
+            $services = is_array($plan['enabled_services'] ?? null) ? implode(',', $plan['enabled_services']) : '';
             echo '<tr>';
-            echo '<td><strong>' . esc_html((string) $key) . '</strong><div class="emonks-subtle">Plan key moet stabiel blijven voor bestaande users.</div></td>';
-            echo '<td><input class="regular-text" name="settings[plans][' . esc_attr((string) $key) . '][label]" value="' . esc_attr((string) ($plan['label'] ?? '')) . '" /></td>';
-            echo '<td><input type="number" min="0" class="small-text" name="settings[plans][' . esc_attr((string) $key) . '][max_workspaces]" value="' . esc_attr((string) ($plan['max_workspaces'] ?? 0)) . '" /></td>';
-            echo '<td><input type="number" step="0.01" min="0" class="small-text" name="settings[plans][' . esc_attr((string) $key) . '][price_monthly]" value="' . esc_attr((string) ($plan['price_monthly'] ?? 0)) . '" /></td>';
-            echo '<td><input type="number" step="0.01" min="0" class="small-text" name="settings[plans][' . esc_attr((string) $key) . '][price_yearly]" value="' . esc_attr((string) ($plan['price_yearly'] ?? 0)) . '" /></td>';
-            echo '<td><input class="small-text" name="settings[plans][' . esc_attr((string) $key) . '][currency]" value="' . esc_attr((string) ($plan['currency'] ?? 'EUR')) . '" /></td>';
-            echo '<td><input class="regular-text" name="settings[plans][' . esc_attr((string) $key) . '][enabled_features]" value="' . esc_attr($features) . '" /></td>';
-            echo '<td><input class="regular-text" name="settings[plans][' . esc_attr((string) $key) . '][stripe_price_constant]" value="' . esc_attr((string) ($plan['stripe_price_constant'] ?? '')) . '" /></td>';
-            echo '<td><input class="regular-text" name="settings[plans][' . esc_attr((string) $key) . '][stripe_price_id_monthly]" value="' . esc_attr((string) ($plan['stripe_price_id_monthly'] ?? '')) . '" /></td>';
-            echo '<td><input class="regular-text" name="settings[plans][' . esc_attr((string) $key) . '][stripe_price_id_yearly]" value="' . esc_attr((string) ($plan['stripe_price_id_yearly'] ?? '')) . '" /></td>';
+            echo '<td><strong>' . esc_html((string) $key) . '</strong></td>';
+            echo '<td>' . esc_html((string) ($plan['label'] ?? '')) . '</td>';
+            echo '<td>' . esc_html((string) ($plan['max_workspaces'] ?? 0)) . '</td>';
+            echo '<td>' . esc_html((string) ($plan['price_monthly'] ?? 0)) . '</td>';
+            echo '<td>' . esc_html((string) ($plan['price_yearly'] ?? 0)) . '</td>';
+            echo '<td>' . esc_html((string) ($plan['currency'] ?? 'EUR')) . '</td>';
+            echo '<td>' . esc_html($features !== '' ? $features : '-') . '</td>';
+            echo '<td>' . esc_html($services !== '' ? $services : '-') . '</td>';
+            echo '<td>' . esc_html((string) ($plan['stripe_price_id_monthly'] ?? '')) . '</td>';
+            echo '<td>' . esc_html((string) ($plan['stripe_price_id_yearly'] ?? '')) . '</td>';
             echo '</tr>';
         }
         echo '</tbody></table>';
-        submit_button('Save Plans');
-        $this->renderSettingsFormEnd();
         echo '</div>';
     }
 
     public function renderFeaturesPage(): void
     {
-        $settings = get_option(Settings::OPTION_KEY, []);
         $flags = Features::globalFlags();
+        $terms = get_terms(['taxonomy' => 'emonks_feature', 'hide_empty' => false]);
 
         echo '<div class="wrap">';
-        $this->renderPageHeader('Emonks SaaS - Features', 'Activeer/deactiveer platform capabilities.', 'Feature flags zijn environment-breed. Gebruik planfeatures voor pakketverschillen en global flags voor operationele toggles.');
+        $this->renderPageHeader('Emonks SaaS - Features', 'Features zijn losse termen die je aan plannen koppelt.', 'Maak eerst features aan, koppel ze daarna in de plan editor. Global flags hieronder blijven platform-brede kill-switches.');
 
+        echo '<p><a class="button button-primary" href="' . esc_url(admin_url('edit-tags.php?taxonomy=emonks_feature&post_type=emonks_plan')) . '">Features beheren</a></p>';
+        echo '<h2>Beschikbare Feature Termen</h2>';
+        echo '<table class="widefat striped"><thead><tr><th>Slug</th><th>Naam</th></tr></thead><tbody>';
+        if (is_array($terms) && ! empty($terms)) {
+            foreach ($terms as $term) {
+                if (! $term instanceof \WP_Term) {
+                    continue;
+                }
+                echo '<tr><td>' . esc_html($term->slug) . '</td><td>' . esc_html($term->name) . '</td></tr>';
+            }
+        } else {
+            echo '<tr><td colspan="2">Nog geen feature-termen.</td></tr>';
+        }
+        echo '</table>';
+
+        echo '<h2 style="margin-top:24px;">Global Feature Flags</h2>';
         $this->renderSettingsFormStart('features');
         echo '<table class="form-table emonks-form-table">';
         foreach ($flags as $flag => $enabled) {
-            $checked = (bool) ($settings['feature_flags'][$flag] ?? $enabled);
+            $checked = (bool) (emonks_get_setting('feature_flags.' . $flag, $enabled));
             echo '<tr><th scope="row">' . esc_html($flag) . '</th><td><label><input type="checkbox" name="settings[feature_flags][' . esc_attr($flag) . ']" value="1" ' . checked($checked, true, false) . ' /> Enabled</label><span class="description">Uitzetten forceert deze capability platformbreed naar false.</span></td></tr>';
         }
         echo '</table>';
-        submit_button('Save Feature Flags');
+        submit_button('Save Global Feature Flags');
         $this->renderSettingsFormEnd();
         echo '</div>';
     }
@@ -164,9 +183,26 @@ final class Admin
     public function renderServicesPage(): void
     {
         $services = Services::all();
+        $terms = get_terms(['taxonomy' => 'emonks_service', 'hide_empty' => false]);
         echo '<div class="wrap">';
-        $this->renderPageHeader('Emonks SaaS - Services', 'Service registry en uitbreidbare modulecontracten.', 'Registreer service modules met labels, schema, capabilities, onboarding steps en policy metadata voor echte multi-SaaS inzetbaarheid.');
+        $this->renderPageHeader('Emonks SaaS - Services', 'Services zijn losse termen die je aan plannen koppelt.', 'Gebruik services als taxonomie voor plan-koppeling. De plugin registreert deze termen automatisch als service types in de runtime.');
 
+        echo '<p><a class="button button-primary" href="' . esc_url(admin_url('edit-tags.php?taxonomy=emonks_service&post_type=emonks_plan')) . '">Services beheren</a></p>';
+        echo '<h2>Beschikbare Service Termen</h2>';
+        echo '<table class="widefat striped"><thead><tr><th>Slug</th><th>Naam</th></tr></thead><tbody>';
+        if (is_array($terms) && ! empty($terms)) {
+            foreach ($terms as $term) {
+                if (! $term instanceof \WP_Term) {
+                    continue;
+                }
+                echo '<tr><td>' . esc_html($term->slug) . '</td><td>' . esc_html($term->name) . '</td></tr>';
+            }
+        } else {
+            echo '<tr><td colspan="2">Nog geen service-termen.</td></tr>';
+        }
+        echo '</tbody></table>';
+
+        echo '<h2 style="margin-top:24px;">Runtime Service Registry</h2>';
         echo '<table class="widefat striped"><thead><tr><th>Service</th><th>Capabilities</th><th>Supported Features</th><th>Onboarding Steps</th><th>Policy</th></tr></thead><tbody>';
         foreach ($services as $key => $service) {
             $caps = implode(', ', (array) ($service['capabilities'] ?? []));

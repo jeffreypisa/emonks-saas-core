@@ -6,7 +6,7 @@ namespace Emonks\SaasCore;
 /**
  * Class: Plans
  * Purpose: Generic subscription plan definitions.
- * Responsibilities: Provide defaults and plan lookups via filters.
+ * Responsibilities: Provide catalog-driven plan lookups via filters.
  * Example: getPlans()['starter'].
  * Hooks: emonks_saas_plans.
  * Architecture Role: Subscription plan catalog.
@@ -20,67 +20,63 @@ final class Plans
     /** @return array<string,array<string,mixed>> */
     public static function getPlans(): array
     {
-        $defaults = [
-            'starter' => [
-                'label' => 'Starter',
-                'max_workspaces' => 1,
-                'enabled_features' => ['public_pages'],
-                'stripe_price_constant' => 'EMONKS_STRIPE_PRICE_STARTER',
-                'stripe_price_id_monthly' => '',
-                'stripe_price_id_yearly' => '',
-                'price_monthly' => 0,
-                'price_yearly' => 0,
-                'currency' => 'EUR',
-            ],
-            'plus' => [
-                'label' => 'Plus',
-                'max_workspaces' => 5,
-                'enabled_features' => ['public_pages', 'qr_codes'],
-                'stripe_price_constant' => 'EMONKS_STRIPE_PRICE_PLUS',
-                'stripe_price_id_monthly' => '',
-                'stripe_price_id_yearly' => '',
-                'price_monthly' => 0,
-                'price_yearly' => 0,
-                'currency' => 'EUR',
-            ],
-            'pro' => [
-                'label' => 'Pro',
-                'max_workspaces' => 25,
-                'enabled_features' => ['public_pages', 'qr_codes', 'custom_domains', 'translations'],
-                'stripe_price_constant' => 'EMONKS_STRIPE_PRICE_PRO',
-                'stripe_price_id_monthly' => '',
-                'stripe_price_id_yearly' => '',
-                'price_monthly' => 0,
-                'price_yearly' => 0,
-                'currency' => 'EUR',
-            ],
-        ];
+        return apply_filters('emonks_saas_plans', self::getPlansFromCatalog());
+    }
 
-        $configured = emonks_get_setting('plans', []);
-        if (is_array($configured) && ! empty($configured)) {
-            foreach ($configured as $key => $plan) {
-                $planKey = sanitize_key((string) $key);
-                if (! is_array($plan)) {
-                    continue;
-                }
-
-                $defaults[$planKey] = [
-                    'label' => sanitize_text_field((string) ($plan['label'] ?? ucfirst($planKey))),
-                    'max_workspaces' => (int) ($plan['max_workspaces'] ?? 0),
-                    'enabled_features' => self::normalizeFeatures($plan['enabled_features'] ?? []),
-                    'stripe_price_constant' => sanitize_text_field((string) ($plan['stripe_price_constant'] ?? '')),
-                    'stripe_price_id' => sanitize_text_field((string) ($plan['stripe_price_id'] ?? '')),
-                    'stripe_price_id_monthly' => sanitize_text_field((string) ($plan['stripe_price_id_monthly'] ?? '')),
-                    'stripe_price_id_yearly' => sanitize_text_field((string) ($plan['stripe_price_id_yearly'] ?? '')),
-                    'price_monthly' => (float) ($plan['price_monthly'] ?? 0),
-                    'price_yearly' => (float) ($plan['price_yearly'] ?? 0),
-                    'currency' => strtoupper(sanitize_text_field((string) ($plan['currency'] ?? 'EUR'))),
-                ];
-            }
+    /** @return array<string,array<string,mixed>> */
+    private static function getPlansFromCatalog(): array
+    {
+        if (! post_type_exists('emonks_plan')) {
+            return [];
         }
 
-        $plans = $defaults;
-        return apply_filters('emonks_saas_plans', $plans);
+        $posts = get_posts([
+            'post_type' => 'emonks_plan',
+            'post_status' => 'publish',
+            'posts_per_page' => -1,
+            'orderby' => ['menu_order' => 'ASC', 'title' => 'ASC'],
+        ]);
+
+        if (empty($posts)) {
+            return [];
+        }
+
+        $plans = [];
+        foreach ($posts as $post) {
+            if (! $post instanceof \WP_Post) {
+                continue;
+            }
+
+            $key = sanitize_key($post->post_name);
+            if ($key === '') {
+                continue;
+            }
+
+            $features = wp_get_post_terms($post->ID, 'emonks_feature', ['fields' => 'slugs']);
+            $services = wp_get_post_terms($post->ID, 'emonks_service', ['fields' => 'slugs']);
+            if (! is_array($features)) {
+                $features = [];
+            }
+            if (! is_array($services)) {
+                $services = [];
+            }
+
+            $plans[$key] = [
+                'label' => sanitize_text_field($post->post_title !== '' ? $post->post_title : ucfirst($key)),
+                'max_workspaces' => (int) get_post_meta($post->ID, 'max_workspaces', true),
+                'enabled_features' => self::normalizeFeatures($features),
+                'enabled_services' => array_values(array_filter(array_map(static fn($v) => sanitize_key((string) $v), $services))),
+                'stripe_price_constant' => sanitize_text_field((string) get_post_meta($post->ID, 'stripe_price_constant', true)),
+                'stripe_price_id' => sanitize_text_field((string) get_post_meta($post->ID, 'stripe_price_id_monthly', true)),
+                'stripe_price_id_monthly' => sanitize_text_field((string) get_post_meta($post->ID, 'stripe_price_id_monthly', true)),
+                'stripe_price_id_yearly' => sanitize_text_field((string) get_post_meta($post->ID, 'stripe_price_id_yearly', true)),
+                'price_monthly' => (float) get_post_meta($post->ID, 'price_monthly', true),
+                'price_yearly' => (float) get_post_meta($post->ID, 'price_yearly', true),
+                'currency' => strtoupper(sanitize_text_field((string) get_post_meta($post->ID, 'currency', true) ?: 'EUR')),
+            ];
+        }
+
+        return $plans;
     }
 
     /** @param mixed $raw */

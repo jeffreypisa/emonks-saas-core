@@ -1,63 +1,27 @@
 # Functioneel Ontwerp - Emonks SaaS Core
 
 ## 1. Doel en Scope
-Emonks SaaS Core is een generieke WordPress plugin die SaaS-kernlogica levert, terwijl het actieve theme eigenaar blijft van presentatie en branding.
+Emonks SaaS Core is een generieke WordPress plugin die SaaS-kernlogica levert, met dynamische backend-configuratie voor meerdere diensten.
 
-## 2. Belangrijkste functionele onderdelen
-- Account/auth/routing
-- Workspace lifecycle en ownership
-- Plans, pricing en limieten
-- Billing met provider abstractie (default Stripe)
-- Upgrade/downgrade planlogica met confirm-preview
-- Feature flags
-- Dynamische onboarding
-- REST basis + validatie
-- Logging en admin beheer
+## 2. Kernmodel
+- **Plans**: custom post type (`emonks_plan`)
+- **Features**: taxonomie (`emonks_feature`)
+- **Services**: taxonomie (`emonks_service`)
 
-## 3. Planbeheer
-In WP Admin > Emonks SaaS > Plans zijn plannen configureerbaar:
-- label
-- max_workspaces
-- price_monthly
-- price_yearly
-- currency
-- enabled_features
-- stripe_price_constant
-- stripe_price_id_monthly
-- stripe_price_id_yearly
+Relaties:
+- Plan -> meerdere features
+- Plan -> meerdere services
+- Service -> meerdere supported features (technische grens)
 
-## 4. Servicebeheer
-In WP Admin > Emonks SaaS > Services zie je service-registry metadata:
-- capabilities
-- supported features
-- onboarding steps
-- policy referentie
+## 3. Beschikbaarheidsmodel
+Een feature is beschikbaar voor gebruiker/workspace als alle lagen akkoord geven:
+1. Service ondersteunt de feature
+2. Plan bevat de feature
+3. Global flag staat op enabled
 
-## 5. Billing en cycles
-Ondersteunde cycles:
-- monthly
-- yearly
-
-Gedrag:
-- zonder actieve subscription: checkout flow
-- met actieve subscription: change plan flow
-- plan change gebruikt eerst preview, daarna bevestiging
-
-## 6. Feature flags gedrag
-In WP Admin > Emonks SaaS > Features:
-- Niet-aangevinkt = expliciet `false`
-- Aangevinkt = `true`
-
-## 7. Onboarding
-Stappen zijn filterbaar en evaluator-driven:
-- `emonks_onboarding_checklist`
-- `emonks_onboarding_step_evaluators`
-
-## 8. Security
-- Nonce checks
-- Sanitization
-- Ownership checks
-- Capability checks
-- REST permission callbacks
-- Webhook signature verify
-- Idempotency
+## 4. Beheerflow
+1. Maak features aan
+2. Maak services aan en configureer supported features
+3. Maak 1 of meer plannen aan
+4. Koppel features/services aan elk plan
+5. Stel pricing/limits in op planniveau

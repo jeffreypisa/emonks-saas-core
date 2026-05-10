@@ -1,14 +1,23 @@
 # Feature Flags
 
-Feature flags zijn globale toggles voor platformgedrag.
+Er zijn drie lagen:
 
-## Opslaggedrag
+## 1) Service Features (technisch)
+- Geconfigureerd op service-term (`supported_features`)
+- Bepaalt of een feature technisch bestaat binnen die service
+
+## 2) Plan Features (commercieel)
+- Beheer als taxonomie-termen (`emonks_feature`)
+- Koppel features aan plannen
+- Bepaalt entitlement per plan
+
+## 3) Global Feature Flags (operationeel)
+- Platformbrede kill-switches in `Emonks SaaS > Features`
 - Niet-aangevinkt = expliciet `false`
 - Aangevinkt = `true`
 
-## Gebruik
-- Combineer global feature flags met planfeatures
-- Gebruik service capabilities voor service-specifieke granulariteit
+## Definitieve beschikbaarheid
+`beschikbaar = service_supports(feature) && plan_has_feature(feature) && global_flag_enabled(feature)`
 
-## Admin UX
-Tabblad Features bevat uitleg over impact van uitschakelen per flag.
+Helper:
+- `emonks_feature_available_for_service_and_plan($serviceType, $plan, $feature)`

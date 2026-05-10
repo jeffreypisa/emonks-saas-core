@@ -7,7 +7,7 @@ namespace Emonks\SaasCore;
  * Class: Services
  * Purpose: Service type registry.
  * Responsibilities: Register and query service definitions and schemas.
- * Example: registerServiceType('guest_guide', [...]).
+ * Example: registerServiceType('concierge', [...]).
  * Hooks: emonks_registered_service_type.
  * Architecture Role: Extensible service/capability catalog.
  */
@@ -18,24 +18,8 @@ final class Services
 
     public function boot(): void
     {
-        self::registerServiceType('generic', [
-            'labels' => ['singular' => 'Item', 'plural' => 'Items'],
-            'routes' => [],
-            'templates' => [],
-            'fields' => [],
-            'capabilities' => [],
-            'supported_features' => [],
-            'settings_schema' => [],
-            'dashboard_cards' => [],
-            'onboarding_steps' => [],
-        ]);
-
-        $module = new \Emonks\SaasCore\Services\GuestGuideService();
-        if ($module instanceof ServiceModuleInterface) {
-            self::registerServiceType($module->key(), $module->definition());
-        } else {
-            $module->register();
-        }
+        $this->registerServicesFromTerms();
+        do_action('emonks_register_service_modules');
     }
 
     /** @param array<string,mixed> $definition */
@@ -81,5 +65,45 @@ final class Services
         $normalized['policy'] = sanitize_text_field((string) ($normalized['policy'] ?? ''));
 
         return $normalized;
+    }
+
+    private function registerServicesFromTerms(): void
+    {
+        if (! taxonomy_exists('emonks_service')) {
+            return;
+        }
+
+        $terms = get_terms([
+            'taxonomy' => 'emonks_service',
+            'hide_empty' => false,
+        ]);
+
+        if (! is_array($terms)) {
+            return;
+        }
+
+        foreach ($terms as $term) {
+            if (! $term instanceof \WP_Term) {
+                continue;
+            }
+
+            $key = sanitize_key($term->slug);
+            if ($key === '' || isset(self::$registry[$key])) {
+                continue;
+            }
+
+            $supported = get_term_meta($term->term_id, 'supported_features', true);
+            if (! is_array($supported)) {
+                $supported = [];
+            }
+
+            self::registerServiceType($key, [
+                'labels' => [
+                    'singular' => $term->name,
+                    'plural' => $term->name,
+                ],
+                'supported_features' => $supported,
+            ]);
+        }
     }
 }

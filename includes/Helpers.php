@@ -297,6 +297,14 @@ function emonks_service_supports(string $serviceType, string $capability): bool
     return in_array(sanitize_key($capability), $caps, true);
 }
 
+function emonks_feature_available_for_service_and_plan(string $serviceType, string $plan, string $feature): bool
+{
+    $featureKey = sanitize_key($feature);
+    return emonks_service_supports($serviceType, $featureKey)
+        && emonks_plan_has_feature($plan, $featureKey)
+        && emonks_feature_enabled($featureKey);
+}
+
 function emonks_get_workspace_by_slug(string $slug): int
 {
     $query = new WP_Query([
