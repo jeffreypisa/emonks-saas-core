@@ -19,16 +19,7 @@ final class Permissions
 
     public function userCanAccessWorkspace(int $userId, int $workspaceId): bool
     {
-        if (user_can($userId, 'manage_options')) {
-            return true;
-        }
-
-        $post = get_post($workspaceId);
-        if (! $post instanceof \WP_Post || $post->post_type !== 'emonks_workspace') {
-            return false;
-        }
-
-        $allowed = ((int) $post->post_author === $userId);
+        $allowed = emonks_can_access_entity_account('workspace', $workspaceId, $userId);
         return (bool) apply_filters('emonks_user_can_access_workspace', $allowed, $userId, $workspaceId);
     }
 }

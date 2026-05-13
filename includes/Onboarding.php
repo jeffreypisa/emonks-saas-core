@@ -12,7 +12,6 @@ final class Onboarding
         add_action('emonks_workspace_updated', [$this, 'markWorkspacePublishedFromWorkspace'], 10, 2);
         add_action('emonks_billing_plan_changed', [$this, 'markBillingConnected'], 10, 1);
         add_action('emonks_stripe_synced_subscription', [$this, 'markBillingConnectedFromWebhook'], 10, 2);
-        add_action('admin_post_emonks_onboarding_step', [$this, 'handleStepCompletion']);
     }
 
     public function markStarted(int $userId): void

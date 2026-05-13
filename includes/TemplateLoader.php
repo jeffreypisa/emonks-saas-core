@@ -64,10 +64,18 @@ final class TemplateLoader
     public function locate(string $template): ?string
     {
         $template = ltrim($template, '/');
+        $candidatePaths = apply_filters('emonks_template_candidate_paths', [
+            'templates/emonks-saas/' . $template,
+            'templates/' . $template,
+        ], $template);
 
-        $themePath = locate_template('templates/' . $template);
-        if (! empty($themePath)) {
-            return $themePath;
+        if (is_array($candidatePaths)) {
+            foreach ($candidatePaths as $candidate) {
+                $themePath = locate_template(ltrim((string) $candidate, '/'));
+                if (! empty($themePath)) {
+                    return $themePath;
+                }
+            }
         }
 
         $pluginPath = EMONKS_SAAS_CORE_PATH . 'templates/' . $template;

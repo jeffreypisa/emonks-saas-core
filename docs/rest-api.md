@@ -2,7 +2,7 @@
 
 Namespace: `emonks/v1`
 
-## Endpoints
+## Core
 - `GET /health`
 - `GET /me`
 - `GET /services`
@@ -11,15 +11,17 @@ Namespace: `emonks/v1`
 - `GET /workspaces/{id}`
 - `PUT|PATCH /workspaces/{id}`
 
-## Validatie
-Routes gebruiken `args`, sanitize callbacks en validate callbacks voor o.a.:
-- `service_type`
-- `workspace_status`
-- `public_slug`
+## Client Portal module
+- `GET /service-items`
+- `POST /service-items`
+- `GET /service-items/{id}`
+- `PUT|PATCH /service-items/{id}`
 
-## Authorisatie
-Per endpoint dedicated permission callbacks.
+### POST /service-items payload
+- `workspace_id` (int, required)
+- `title` (string, required)
+- `status` (string, optional)
 
-## Gedrag publicatie/slugs
-- `published` status vereist policy-voorwaarden (billing/onboarding)
-- slug conflicts geven 422 + suggesties
+### Security
+- Module endpoints alleen actief als module enabled is
+- Account-scope + policy checks verplicht

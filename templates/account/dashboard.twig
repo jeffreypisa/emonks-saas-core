@@ -1,6 +1,11 @@
 {% extends "base.twig" %}
 
+{% block head %}
+  <title>Dashboard | Emonks</title>
+{% endblock %}
+
 {% block content %}
+<section class="section emonks-saas-section">
 <div class="container py-4 py-lg-5 emonks-account-shell">
   <div class="row g-4 align-items-stretch">
     <div class="col-12 col-lg-8">
@@ -41,7 +46,7 @@
   {% if flash_messages %}
     <div class="mt-4">
       {% for key, message in flash_messages %}
-        <div class="alert alert-info mb-2">{{ message }}</div>
+        <div class="alert {{ function('emonks_alert_variant', key) }} alert-dismissible fade show mb-2" role="alert">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>
       {% endfor %}
     </div>
   {% endif %}
@@ -85,4 +90,5 @@
     </div>
   </div>
 </div>
+</section>
 {% endblock %}

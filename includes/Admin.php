@@ -21,6 +21,7 @@ final class Admin
         add_submenu_page('emonks-saas-core', 'Plans', 'Plans', 'manage_options', 'emonks-saas-plans', [$this, 'renderPlansPage']);
         add_submenu_page('emonks-saas-core', 'Features', 'Features', 'manage_options', 'emonks-saas-features', [$this, 'renderFeaturesPage']);
         add_submenu_page('emonks-saas-core', 'Services', 'Services', 'manage_options', 'emonks-saas-services', [$this, 'renderServicesPage']);
+        add_submenu_page('emonks-saas-core', 'Module Health', 'Module Health', 'manage_options', 'emonks-saas-module-health', [$this, 'renderModuleHealthPage']);
         add_submenu_page('emonks-saas-core', 'Onboarding', 'Onboarding', 'manage_options', 'emonks-saas-onboarding', [$this, 'renderOnboardingPage']);
         add_submenu_page('emonks-saas-core', 'Logs', 'Logs', 'manage_options', 'emonks-saas-logs', [$this, 'renderLogsPage']);
     }
@@ -81,6 +82,7 @@ final class Admin
         echo '<table class="form-table emonks-form-table">';
         echo '<tr><th scope="row"><label for="branding_name">Branding Name</label></th><td><input name="settings[branding][name]" id="branding_name" class="regular-text" value="' . esc_attr((string) ($settings['branding']['name'] ?? 'Emonks')) . '" /><span class="description">Wordt gebruikt als standaard productnaam in plugin UI context.</span></td></tr>';
         echo '<tr><th scope="row"><label for="debug_enabled">Debug Logging</label></th><td><label><input type="checkbox" id="debug_enabled" name="settings[debug][enabled]" value="1" ' . checked((bool) ($settings['debug']['enabled'] ?? false), true, false) . ' /> Enable debug logging to PHP error log when WP_DEBUG=true</label><span class="description">Gebruik in combinatie met het Logs-tabblad voor snellere troubleshooting.</span></td></tr>';
+        echo '<tr><th scope="row"><label for="module_client_portal">Module: Client Portal</label></th><td><label><input type="checkbox" id="module_client_portal" name="settings[modules][enabled][client_portal]" value="1" ' . checked((bool) ($settings['modules']['enabled']['client_portal'] ?? true), true, false) . ' /> Active</label><span class="description">Schakelt client portal routes, REST endpoints en dashboard cards aan/uit.</span></td></tr>';
         echo '</table>';
         submit_button('Save General Settings');
         $this->renderSettingsFormEnd();
@@ -236,6 +238,52 @@ final class Admin
         echo '</div>';
     }
 
+    public function renderModuleHealthPage(): void
+    {
+        $health = Plugin::instance()->get('module_health');
+        $rows = [];
+        if ($health instanceof ModuleHealth) {
+            $rows = $health->report();
+        }
+
+        echo '<div class="wrap">';
+        $this->renderPageHeader('Emonks SaaS - Module Health', 'Snelle controle op module-status, lifecycle en template-resolutie.', 'Gebruik dit scherm om snel te zien of modules enabled zijn en of hun belangrijkste templates geladen kunnen worden.');
+        echo '<table class="widefat striped"><thead><tr><th>Module</th><th>Enabled</th><th>Routes actief</th><th>REST actief</th><th>Templates gevonden</th><th>Lifecycle</th><th>Details</th></tr></thead><tbody>';
+        if (empty($rows)) {
+            echo '<tr><td colspan="7">No modules registered.</td></tr>';
+        } else {
+            foreach ($rows as $row) {
+                $detailBits = [];
+                $routes = is_array($row['routes'] ?? null) ? $row['routes'] : [];
+                $rest = is_array($row['rest'] ?? null) ? $row['rest'] : [];
+                $templateBits = [];
+                $templates = is_array($row['templates'] ?? null) ? $row['templates'] : [];
+                foreach ($routes as $route => $ok) {
+                    $detailBits[] = 'route ' . esc_html((string) $route) . ': ' . ($ok ? 'ok' : 'missing');
+                }
+                foreach ($rest as $endpoint => $ok) {
+                    $detailBits[] = 'rest ' . esc_html((string) $endpoint) . ': ' . ($ok ? 'ok' : 'missing');
+                }
+                foreach ($templates as $template => $ok) {
+                    $templateBits[] = esc_html((string) $template) . ': ' . ($ok ? 'ok' : 'missing');
+                }
+                $detailBits = array_merge($detailBits, $templateBits);
+                $detailSummary = empty($detailBits) ? '-' : implode('<br>', $detailBits);
+
+                echo '<tr>';
+                echo '<td><strong>' . esc_html((string) ($row['key'] ?? '')) . '</strong></td>';
+                echo '<td>' . (! empty($row['enabled']) ? 'yes' : 'no') . '</td>';
+                echo '<td>' . (! empty($row['routes_active']) ? 'yes' : 'no') . '</td>';
+                echo '<td>' . (! empty($row['rest_active']) ? 'yes' : 'no') . '</td>';
+                echo '<td>' . (! empty($row['templates_found']) ? 'yes' : 'no') . '</td>';
+                echo '<td>' . (! empty($row['lifecycle']) ? 'yes' : 'no') . '</td>';
+                echo '<td>' . $detailSummary . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                echo '</tr>';
+            }
+        }
+        echo '</tbody></table></div>';
+    }
+
     public function renderLogsPage(): void
     {
         $logs = get_option('emonks_saas_logs', []);
@@ -290,6 +338,9 @@ final class Admin
             }
 
             $current['feature_flags'] = $nextFlags;
+        } elseif ($tab === 'general') {
+            $current = array_replace_recursive($current, $sanitized);
+            $current['modules']['enabled']['client_portal'] = isset($_POST['settings']['modules']['enabled']['client_portal']);
         } else {
             $current = array_replace_recursive($current, $sanitized);
         }

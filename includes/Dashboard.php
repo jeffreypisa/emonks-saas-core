@@ -32,6 +32,7 @@ final class Dashboard
         $context['can_create_workspace'] = emonks_user_can_create_workspace($userId);
         $context['billing_active'] = emonks_user_has_active_subscription($userId);
         $context['workspace_status_counts'] = emonks_get_workspace_status_counts($userId);
+        $context['dashboard_cards'] = apply_filters('emonks_dashboard_cards', [], $userId);
         $context['service_types'] = Services::all();
         $context['workspace_statuses'] = WorkspaceStatuses::all();
         $context['next_action'] = $this->resolveNextAction($userId, $context);
@@ -40,7 +41,6 @@ final class Dashboard
             'billing_checkout' => emonks_admin_post_url('emonks_billing_checkout'),
             'billing_portal' => emonks_admin_post_url('emonks_billing_portal'),
             'billing_change_plan' => emonks_admin_post_url('emonks_billing_change_plan'),
-            'onboarding_step' => emonks_admin_post_url('emonks_onboarding_step'),
         ];
 
         $template = match ($route) {
@@ -50,6 +50,8 @@ final class Dashboard
             'account_billing' => 'account/billing.twig',
             'account_settings' => 'account/settings.twig',
             'account_onboarding' => 'account/onboarding.twig',
+            'account_client_portal' => 'modules/client-portal/index.twig',
+            'account_client_portal_item' => 'modules/client-portal/item.twig',
             default => 'account/dashboard.twig',
         };
 
@@ -67,6 +69,36 @@ final class Dashboard
                 'cycle' => sanitize_key((string) ($_GET['preview_cycle'] ?? '')),
                 'is_upgrade' => (string) ($_GET['preview_upgrade'] ?? '0') === '1',
             ];
+        }
+
+        if ($route === 'account_client_portal' || $route === 'account_client_portal_item') {
+            $accountId = (int) ($context['current_account_id'] ?? 0);
+            $policy = Plugin::instance()->get('policy');
+            if (! $policy instanceof Policy || ! $policy->can($userId, 'cp_view', $accountId)) {
+                wp_die(esc_html__('You cannot access client portal.', 'emonks-saas-core'), 403);
+            }
+
+            $itemsService = Plugin::instance()->get('service_items');
+            if ($itemsService instanceof ServiceItems) {
+                $context['cp_items'] = $itemsService->listByAccount($accountId, 'client_portal');
+            } else {
+                $context['cp_items'] = [];
+            }
+
+            if ($route === 'account_client_portal_item') {
+                $itemId = absint((string) get_query_var('emonks_item_id'));
+                $item = get_post($itemId);
+                if (! $item instanceof \WP_Post || $item->post_type !== 'emonks_service_item') {
+                    wp_die(esc_html__('Item not found.', 'emonks-saas-core'), 404);
+                }
+
+                if (! emonks_can_access_entity_account('service_item', $itemId, $userId)) {
+                    wp_die(esc_html__('Forbidden item access.', 'emonks-saas-core'), 403);
+                }
+
+                $context['cp_item'] = $item;
+                $context['cp_item_status'] = sanitize_key((string) get_post_meta($itemId, 'status', true));
+            }
         }
 
         emonks_render_template($template, $context);

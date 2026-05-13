@@ -1,11 +1,16 @@
 {% extends "base.twig" %}
 
+{% block head %}
+  <title>Onboarding | Emonks</title>
+{% endblock %}
+
 {% block content %}
+<section class="section emonks-saas-section">
 <div class="container py-4 py-lg-5 emonks-account-shell">
   {% if flash_messages %}
     <div class="mb-3">
       {% for key, message in flash_messages %}
-        <div class="alert alert-info mb-2">{{ message }}</div>
+        <div class="alert {{ function('emonks_alert_variant', key) }} alert-dismissible fade show mb-2" role="alert">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>
       {% endfor %}
     </div>
   {% endif %}
@@ -22,25 +27,40 @@
 
   <div class="row g-3">
     {% for step, done in onboarding_progress.steps %}
+      {% set step_url = '/' ~ routes.account ~ '/' %}
+      {% set step_cta = 'Open account' %}
+      {% if step == 'first_workspace' %}
+        {% set step_url = '/' ~ routes.account ~ '/' ~ routes.workspaces ~ '/' %}
+        {% set step_cta = 'Ga naar workspaces' %}
+      {% elseif step == 'billing_connected' %}
+        {% set step_url = '/' ~ routes.account ~ '/' ~ routes.billing ~ '/' %}
+        {% set step_cta = 'Ga naar billing' %}
+      {% elseif step == 'workspace_published' %}
+        {% set step_url = '/' ~ routes.account ~ '/' ~ routes.workspaces ~ '/' %}
+        {% set step_cta = 'Publiceer workspace' %}
+      {% elseif step == 'account_created' %}
+        {% set step_url = '/' ~ routes.account ~ '/' %}
+        {% set step_cta = 'Open dashboard' %}
+      {% endif %}
       <div class="col-12 col-md-6">
         <div class="card border-0 shadow-sm h-100">
           <div class="card-body p-4 d-flex flex-column">
             <div class="d-flex justify-content-between align-items-start mb-3">
-              <h2 class="h6 text-capitalize mb-0">{{ step|replace({'_':' '}) }}</h2>
-              <span class="badge {{ done ? 'text-bg-success' : 'text-bg-secondary' }}">{{ done ? 'Done' : 'Open' }}</span>
+              <h2 class="h6 text-capitalize mb-0 d-flex align-items-center gap-2">
+                <span aria-hidden="true">{{ done ? '✓' : '○' }}</span>
+                <span>{{ step|replace({'_':' '}) }}</span>
+              </h2>
+              <span class="badge {{ done ? 'text-bg-success' : 'text-bg-secondary' }}">{{ done ? 'Voltooid' : 'Open' }}</span>
             </div>
-            <p class="small text-muted flex-grow-1">Deze stap wordt automatisch voltooid zodra de onderliggende actie gebeurt, of je kunt hem hier handmatig afronden.</p>
-            {% if not done %}
-              <form method="post" action="{{ admin_post.onboarding_step }}">
-                {{ function('wp_nonce_field', 'emonks_onboarding_step', 'emonks_nonce') }}
-                <input type="hidden" name="step" value="{{ step }}">
-                <button class="btn btn-sm btn-outline-primary" type="submit">Markeer als voltooid</button>
-              </form>
-            {% endif %}
+            <p class="small text-muted flex-grow-1">Deze stap wordt automatisch voltooid zodra de onderliggende actie gebeurt.</p>
+            <div class="mb-3">
+              <a class="btn btn-sm btn-primary" href="{{ step_url }}">{{ step_cta }}</a>
+            </div>
           </div>
         </div>
       </div>
     {% endfor %}
   </div>
 </div>
+</section>
 {% endblock %}

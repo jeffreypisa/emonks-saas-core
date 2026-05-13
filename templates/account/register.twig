@@ -1,6 +1,11 @@
 {% extends "base.twig" %}
 
+{% block head %}
+  <title>Registreren | Emonks</title>
+{% endblock %}
+
 {% block content %}
+<section class="section emonks-saas-section">
 <div class="container py-5 emonks-account-shell">
   <div class="row justify-content-center">
     <div class="col-12 col-md-8 col-lg-5">
@@ -10,7 +15,7 @@
           <p class="text-muted mb-4">Start met een generieke workspace en schaal per service type.</p>
           {% if flash_messages %}
             {% for key, message in flash_messages %}
-              <div class="alert {{ key ends with '_error' ? 'alert-danger' : 'alert-info' }} mb-3">{{ message }}</div>
+              <div class="alert {{ function('emonks_alert_variant', key) }} alert-dismissible fade show mb-3" role="alert">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>
             {% endfor %}
           {% endif %}
           <form method="post" class="vstack gap-3">
@@ -31,4 +36,5 @@
     </div>
   </div>
 </div>
+</section>
 {% endblock %}

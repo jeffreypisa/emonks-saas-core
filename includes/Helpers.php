@@ -107,6 +107,16 @@ function emonks_get_account_url(string $suffix = ''): string
     return home_url($path . '/');
 }
 
+function emonks_get_client_portal_url(string $suffix = ''): string
+{
+    $base = emonks_get_account_url('services/client-portal');
+    if ($suffix === '') {
+        return trailingslashit($base);
+    }
+
+    return trailingslashit($base) . ltrim($suffix, '/');
+}
+
 function emonks_get_login_url(): string
 {
     $routes = emonks_get_routes();
@@ -119,6 +129,7 @@ function emonks_default_context(): array
     $plan = $userId > 0 ? emonks_get_current_user_plan() : 'starter';
     $workspaceCount = $userId > 0 ? emonks_count_user_workspaces($userId) : 0;
     $billingCycle = $userId > 0 ? emonks_get_current_user_billing_cycle($userId) : 'monthly';
+    $primaryAccountId = $userId > 0 ? emonks_get_primary_account_id($userId) : 0;
     return [
         'labels' => emonks_get_labels(),
         'routes' => emonks_get_routes(),
@@ -127,6 +138,8 @@ function emonks_default_context(): array
         'plans' => Plans::getPlans(),
         'current_workspace_count' => $workspaceCount,
         'current_billing_cycle' => $billingCycle,
+        'current_account_id' => $primaryAccountId,
+        'current_account_ids' => $userId > 0 ? emonks_get_user_account_ids($userId) : [],
         'billing_test_mode' => emonks_is_billing_test_mode(),
         'feature_flags' => Features::globalFlags(),
         'onboarding_progress' => $userId > 0 ? emonks_get_onboarding_progress($userId) : ['steps' => [], 'percentage' => 0, 'completed' => false],
@@ -150,19 +163,163 @@ function emonks_render_template(string $template, array $context = []): void
     }
 }
 
+function emonks_template_exists(string $template): bool
+{
+    $loader = Plugin::instance()->get('template_loader');
+    if (! $loader instanceof Emonks\SaasCore\TemplateLoader) {
+        return false;
+    }
+
+    return $loader->locate($template) !== null;
+}
+
 function emonks_get_user_workspaces(int $userId): array
 {
-    $args = [
+    $baseArgs = [
         'post_type' => 'emonks_workspace',
         'post_status' => 'publish',
         'posts_per_page' => -1,
     ];
 
-    if (! user_can($userId, 'manage_options')) {
-        $args['author'] = $userId;
+    if (user_can($userId, 'manage_options')) {
+        return get_posts($baseArgs);
     }
 
-    return get_posts($args);
+    $accountIds = emonks_get_user_account_ids($userId);
+    if (empty($accountIds)) {
+        return [];
+    }
+
+    return get_posts(array_merge($baseArgs, [
+        'meta_query' => [
+            [
+                'key' => 'account_id',
+                'value' => $accountIds,
+                'compare' => 'IN',
+                'type' => 'NUMERIC',
+            ],
+        ],
+    ]));
+}
+
+function emonks_get_primary_account_id(?int $userId = null): int
+{
+    $userId = $userId ?: get_current_user_id();
+    if ($userId <= 0) {
+        return 0;
+    }
+
+    $accountId = absint((string) get_user_meta($userId, 'emonks_primary_account_id', true));
+    if ($accountId > 0 && get_post_type($accountId) === 'emonks_account') {
+        return $accountId;
+    }
+
+    $accounts = Plugin::instance()->get('accounts');
+    if ($accounts instanceof Emonks\SaasCore\Accounts) {
+        return $accounts->ensurePersonalAccount($userId);
+    }
+
+    return 0;
+}
+
+/** @return array<int,int> */
+function emonks_get_user_account_ids(?int $userId = null): array
+{
+    $userId = $userId ?: get_current_user_id();
+    if ($userId <= 0) {
+        return [];
+    }
+
+    if (user_can($userId, 'manage_options')) {
+        $accountPosts = get_posts([
+            'post_type' => 'emonks_account',
+            'post_status' => 'publish',
+            'posts_per_page' => -1,
+            'fields' => 'ids',
+        ]);
+        if (! is_array($accountPosts)) {
+            return [];
+        }
+
+        return array_values(array_map(static fn($id) => absint((string) $id), $accountPosts));
+    }
+
+    $memberships = Plugin::instance()->get('memberships');
+    if ($memberships instanceof Emonks\SaasCore\Memberships) {
+        $ids = $memberships->getUserAccountIds($userId);
+        if (! empty($ids)) {
+            return $ids;
+        }
+    }
+
+    $primary = emonks_get_primary_account_id($userId);
+    return $primary > 0 ? [$primary] : [];
+}
+
+function emonks_user_can_access_account(int $userId, int $accountId): bool
+{
+    if (user_can($userId, 'manage_options')) {
+        return true;
+    }
+
+    if ($userId <= 0 || $accountId <= 0) {
+        return false;
+    }
+
+    $primaryAccountId = absint((string) get_user_meta($userId, 'emonks_primary_account_id', true));
+    if ($primaryAccountId > 0 && $primaryAccountId === $accountId) {
+        $memberships = Plugin::instance()->get('memberships');
+        if ($memberships instanceof Emonks\SaasCore\Memberships) {
+            $memberships->addMembership($accountId, $userId, 'account_owner');
+        }
+        return true;
+    }
+
+    $ownerUserId = absint((string) get_post_meta($accountId, 'owner_user_id', true));
+    if ($ownerUserId > 0 && $ownerUserId === $userId) {
+        $memberships = Plugin::instance()->get('memberships');
+        if ($memberships instanceof Emonks\SaasCore\Memberships) {
+            $memberships->addMembership($accountId, $userId, 'account_owner');
+        }
+        update_user_meta($userId, 'emonks_primary_account_id', $accountId);
+        return true;
+    }
+
+    $memberships = Plugin::instance()->get('memberships');
+    if ($memberships instanceof Emonks\SaasCore\Memberships) {
+        return $memberships->userHasAccount($userId, $accountId);
+    }
+
+    return false;
+}
+
+function emonks_get_account_role(int $userId, int $accountId): string
+{
+    if (user_can($userId, 'manage_options')) {
+        return 'account_owner';
+    }
+
+    global $wpdb;
+    $table = \Emonks\SaasCore\Memberships::tableName();
+    $role = $wpdb->get_var($wpdb->prepare(
+        "SELECT role FROM {$table} WHERE account_id = %d AND user_id = %d LIMIT 1",
+        $accountId,
+        $userId
+    ));
+
+    $role = sanitize_key((string) $role);
+    return $role !== '' ? $role : 'account_member';
+}
+
+/** @return array<int,\WP_Post> */
+function emonks_get_account_service_items(int $accountId, string $moduleKey = ''): array
+{
+    $service = Plugin::instance()->get('service_items');
+    if (! $service instanceof Emonks\SaasCore\ServiceItems) {
+        return [];
+    }
+
+    return $service->listByAccount($accountId, $moduleKey);
 }
 
 function emonks_count_user_workspaces(int $userId): int
@@ -188,14 +345,91 @@ function emonks_workspace_has_status(int $workspaceId, string $status): bool
     return emonks_get_workspace_status($workspaceId) === sanitize_key($status);
 }
 
-function emonks_user_can_access_workspace(int $userId, int $workspaceId): bool
+/** @return array<string,array<string,string>> */
+function emonks_status_vocabulary(): array
 {
-    $permissions = Plugin::instance()->get('permissions');
-    if ($permissions instanceof Permissions) {
-        return $permissions->userCanAccessWorkspace($userId, $workspaceId);
+    return [
+        'draft' => ['label' => 'Draft', 'badge' => 'text-bg-secondary'],
+        'open' => ['label' => 'Open', 'badge' => 'text-bg-secondary'],
+        'in_progress' => ['label' => 'In progress', 'badge' => 'text-bg-primary'],
+        'blocked' => ['label' => 'Blocked', 'badge' => 'text-bg-warning'],
+        'done' => ['label' => 'Done', 'badge' => 'text-bg-success'],
+        'active' => ['label' => 'Active', 'badge' => 'text-bg-primary'],
+        'published' => ['label' => 'Published', 'badge' => 'text-bg-success'],
+        'suspended' => ['label' => 'Suspended', 'badge' => 'text-bg-warning'],
+        'archived' => ['label' => 'Archived', 'badge' => 'text-bg-dark'],
+    ];
+}
+
+function emonks_normalize_status(string $status, string $fallback = 'open'): string
+{
+    $status = sanitize_key($status);
+    $fallback = sanitize_key($fallback);
+    $vocabulary = emonks_status_vocabulary();
+
+    if (isset($vocabulary[$status])) {
+        return $status;
     }
 
-    return false;
+    return isset($vocabulary[$fallback]) ? $fallback : 'open';
+}
+
+function emonks_get_status_label(string $status): string
+{
+    $status = emonks_normalize_status($status, 'open');
+    $vocabulary = emonks_status_vocabulary();
+    return (string) ($vocabulary[$status]['label'] ?? ucfirst(str_replace('_', ' ', $status)));
+}
+
+function emonks_get_status_badge_class(string $status): string
+{
+    $status = emonks_normalize_status($status, 'open');
+    $vocabulary = emonks_status_vocabulary();
+    return (string) ($vocabulary[$status]['badge'] ?? 'text-bg-secondary');
+}
+
+function emonks_user_can_access_workspace(int $userId, int $workspaceId): bool
+{
+    return emonks_can_access_entity_account('workspace', $workspaceId, $userId);
+}
+
+function emonks_can_access_entity_account(string $entityType, int $entityId, ?int $userId = null): bool
+{
+    $entityType = sanitize_key($entityType);
+    $entityId = absint((string) $entityId);
+    $userId = $userId ?: get_current_user_id();
+
+    if ($userId <= 0 || $entityId <= 0) {
+        return false;
+    }
+
+    if (user_can($userId, 'manage_options')) {
+        return true;
+    }
+
+    $accountId = 0;
+
+    if ($entityType === 'account') {
+        $accountId = $entityId;
+    } elseif ($entityType === 'workspace') {
+        if (get_post_type($entityId) !== 'emonks_workspace') {
+            return false;
+        }
+        $accountId = absint((string) get_post_meta($entityId, 'account_id', true));
+    } elseif ($entityType === 'service_item') {
+        if (get_post_type($entityId) !== 'emonks_service_item') {
+            return false;
+        }
+        $accountId = absint((string) get_post_meta($entityId, 'account_id', true));
+    } else {
+        return false;
+    }
+
+    if ($accountId <= 0) {
+        return false;
+    }
+
+    return emonks_user_can_access_account($userId, $accountId);
 }
 
 function emonks_get_current_user_plan(): string
@@ -415,11 +649,11 @@ function emonks_get_workspace_status_label(string $status): string
 function emonks_get_workspace_status_badge_class(string $status): string
 {
     return match (sanitize_key($status)) {
-        'published' => 'emonks-badge-published',
-        'active' => 'emonks-badge-active',
-        'suspended' => 'emonks-badge-suspended',
-        'archived' => 'emonks-badge-archived',
-        default => 'emonks-badge-draft',
+        'published' => 'text-bg-success',
+        'active' => 'text-bg-primary',
+        'suspended' => 'text-bg-warning',
+        'archived' => 'text-bg-dark',
+        default => 'text-bg-secondary',
     };
 }
 
@@ -435,24 +669,46 @@ function emonks_user_completed_onboarding(?int $userId = null): bool
     return (bool) ($progress['completed'] ?? false);
 }
 
+function emonks_user_ready_to_publish_workspace(?int $userId = null): bool
+{
+    $userId = $userId ?: get_current_user_id();
+    $onboarding = Plugin::instance()->get('onboarding');
+    if (! $onboarding instanceof Emonks\SaasCore\Onboarding) {
+        return false;
+    }
+
+    $progress = $onboarding->getProgress($userId);
+    $steps = is_array($progress['steps'] ?? null) ? $progress['steps'] : [];
+    if (empty($steps)) {
+        return false;
+    }
+
+    foreach ($steps as $step => $done) {
+        if (sanitize_key((string) $step) === 'workspace_published') {
+            continue;
+        }
+
+        if (! (bool) $done) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 function emonks_user_has_published_workspace(int $userId): bool
 {
-    $query = new WP_Query([
-        'post_type' => 'emonks_workspace',
-        'post_status' => 'publish',
-        'author' => $userId,
-        'posts_per_page' => 1,
-        'fields' => 'ids',
-        'meta_query' => [
-            [
-                'key' => 'workspace_status',
-                'value' => 'published',
-                'compare' => '=',
-            ],
-        ],
-    ]);
+    foreach (emonks_get_user_workspaces($userId) as $workspace) {
+        if (! $workspace instanceof WP_Post) {
+            continue;
+        }
 
-    return ! empty($query->posts);
+        if (emonks_workspace_has_status($workspace->ID, 'published')) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 function emonks_get_onboarding_progress(?int $userId = null): array
@@ -493,6 +749,16 @@ function emonks_get_workspace_status_counts(int $userId): array
     return $counts;
 }
 
+function emonks_module_enabled(string $key): bool
+{
+    $registry = Plugin::instance()->get('module_registry');
+    if (! $registry instanceof Emonks\SaasCore\ModuleRegistry) {
+        return false;
+    }
+
+    return $registry->isEnabled($key);
+}
+
 function emonks_flash_add(string $key, string $message): void
 {
     if (! is_user_logged_in()) {
@@ -523,4 +789,38 @@ function emonks_flash_pull(): array
 
     delete_user_meta($userId, 'emonks_flash_messages');
     return $messages;
+}
+
+function emonks_alert_variant(string $flashKey): string
+{
+    $key = sanitize_key($flashKey);
+    if ($key === '') {
+        return 'alert-info';
+    }
+
+    if (str_ends_with($key, '_error')) {
+        return 'alert-danger';
+    }
+
+    if (str_ends_with($key, '_warning')) {
+        return 'alert-warning';
+    }
+
+    if (str_ends_with($key, '_success')) {
+        return 'alert-success';
+    }
+
+    return 'alert-info';
+}
+
+/** @param array<string,mixed> $details */
+function emonks_rest_error(string $code, string $message, array $details = [], int $status = 400): WP_REST_Response
+{
+    $payload = [
+        'code' => sanitize_key($code),
+        'message' => sanitize_text_field($message),
+        'details' => $details,
+    ];
+
+    return new WP_REST_Response($payload, $status);
 }

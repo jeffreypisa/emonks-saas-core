@@ -48,6 +48,7 @@ final class Plugin
     {
         $this->loadDependencies();
         add_action('init', [$this, 'loadTextDomain']);
+        add_action('emonks_register_modules', [$this, 'registerCoreModules']);
         TimberBridge::bootstrap();
         $this->registerServices();
 
@@ -58,6 +59,15 @@ final class Plugin
         }
 
         do_action('emonks_saas_core_booted', $this);
+    }
+
+    public function registerCoreModules(object $registry): void
+    {
+        if (! $registry instanceof ModuleRegistry) {
+            return;
+        }
+
+        $registry->register(new Modules\ClientPortal\ClientPortalModule());
     }
 
     public function loadTextDomain(): void
@@ -87,6 +97,11 @@ final class Plugin
             'Workspaces.php',
             'WorkspaceStatuses.php',
             'Permissions.php',
+            'Policy.php',
+            'Accounts.php',
+            'MigrationRunner.php',
+            'Memberships.php',
+            'ServiceItems.php',
             'Plans.php',
             'Billing.php',
             'Stripe.php',
@@ -94,10 +109,16 @@ final class Plugin
             'Catalog.php',
             'Services.php',
             'ServiceModuleInterface.php',
+            'ModuleInterface.php',
+            'ModuleLifecycleInterface.php',
+            'ModuleRegistry.php',
+            'ModuleHealth.php',
+            'Modules/ClientPortal/ClientPortalModule.php',
             'BillingProviderInterface.php',
             'StripeBillingProvider.php',
             'Features.php',
             'Settings.php',
+            'Branding.php',
             'Admin.php',
             'Assets.php',
             'Emails.php',
@@ -116,12 +137,20 @@ final class Plugin
     {
         $this->services = [
             'settings' => new Settings(),
+            'branding' => new Branding(),
             'template_loader' => new TemplateLoader(),
             'statuses' => new WorkspaceStatuses(),
             'plans' => new Plans(),
             'features' => new Features(),
             'services_registry' => new Services(),
             'permissions' => new Permissions(),
+            'policy' => new Policy(),
+            'accounts' => new Accounts(),
+            'migration_runner' => new MigrationRunner(),
+            'memberships' => new Memberships(),
+            'service_items' => new ServiceItems(),
+            'module_registry' => new ModuleRegistry(),
+            'module_health' => new ModuleHealth(),
             'admin' => new Admin(),
             'auth' => new Auth(),
             'workspaces' => new Workspaces(),

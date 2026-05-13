@@ -1,11 +1,16 @@
 {% extends "base.twig" %}
 
+{% block head %}
+  <title>Workspaces | Emonks</title>
+{% endblock %}
+
 {% block content %}
+<section class="section emonks-saas-section">
 <div class="container py-4 py-lg-5 emonks-account-shell">
   {% if flash_messages %}
     <div class="mb-3">
       {% for key, message in flash_messages %}
-        <div class="alert {{ key ends with '_error' ? 'alert-danger' : (key ends with '_warning' ? 'alert-warning' : 'alert-info') }} mb-2">{{ message }}</div>
+        <div class="alert {{ function('emonks_alert_variant', key) }} alert-dismissible fade show mb-2" role="alert">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>
       {% endfor %}
     </div>
   {% endif %}
@@ -29,6 +34,7 @@
       <form method="post" action="{{ admin_post.workspace_save }}" class="row g-3">
         {{ function('wp_nonce_field', 'emonks_workspace_save', 'emonks_nonce') }}
         <input type="hidden" name="workspace_id" value="0">
+        <input type="hidden" name="account_id" value="{{ current_account_id }}">
         <div class="col-12 col-md-6">
           <label class="form-label" for="ws_title">Naam</label>
           <input id="ws_title" name="title" class="form-control" required placeholder="Bijv. Main workspace">
@@ -105,4 +111,5 @@
     </div>
   </div>
 </div>
+</section>
 {% endblock %}

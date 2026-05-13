@@ -51,6 +51,7 @@ final class Workspaces
 
         $userId = get_current_user_id();
         $workspaceId = absint((string) ($_POST['workspace_id'] ?? 0));
+        $requestedAccountId = absint((string) ($_POST['account_id'] ?? 0));
         $title = sanitize_text_field((string) ($_POST['title'] ?? 'Untitled workspace'));
         $serviceType = sanitize_key((string) ($_POST['service_type'] ?? 'generic'));
 
@@ -62,6 +63,15 @@ final class Workspaces
 
         if (! $isNew && ! emonks_user_can_access_workspace($userId, $workspaceId)) {
             wp_die(esc_html__('Unauthorized workspace edit.', 'emonks-saas-core'), 403);
+        }
+
+        $accountId = $requestedAccountId > 0 ? $requestedAccountId : emonks_get_primary_account_id($userId);
+        if ($accountId <= 0) {
+            wp_die(esc_html__('No account available for this workspace.', 'emonks-saas-core'), 422);
+        }
+
+        if (! user_can($userId, 'manage_options') && ! emonks_user_can_access_account($userId, $accountId)) {
+            wp_die(esc_html__('You cannot assign this account.', 'emonks-saas-core'), 403);
         }
 
         if ($isNew) {
@@ -91,6 +101,7 @@ final class Workspaces
         if ($serviceType === '' || ! array_key_exists($serviceType, Services::all())) {
             $serviceType = 'generic';
         }
+        $moduleKey = $serviceType === 'client_portal' ? 'client_portal' : 'generic';
 
         $settingsRaw = (string) ($_POST['settings_json'] ?? '{}');
         $settings = json_decode($settingsRaw, true);
@@ -118,7 +129,7 @@ final class Workspaces
         $requiresBilling = (bool) ($policy['can_publish_requires_billing'] ?? true);
         $requiresOnboarding = (bool) ($policy['can_publish_requires_onboarding'] ?? true);
         $canPublish = user_can($userId, 'manage_options')
-            || ((! $requiresBilling || emonks_user_has_active_subscription($userId)) && (! $requiresOnboarding || emonks_user_completed_onboarding($userId)));
+            || ((! $requiresBilling || emonks_user_has_active_subscription($userId)) && (! $requiresOnboarding || emonks_user_ready_to_publish_workspace($userId)));
 
         if ($workspaceStatus === 'published' && ! $canPublish) {
             $workspaceStatus = 'draft';
@@ -126,6 +137,8 @@ final class Workspaces
         }
 
         update_post_meta($workspaceId, 'service_type', $serviceType);
+        update_post_meta($workspaceId, 'module_key', $moduleKey);
+        update_post_meta($workspaceId, 'account_id', $accountId);
         update_post_meta($workspaceId, 'workspace_status', $workspaceStatus);
         update_post_meta($workspaceId, 'public_slug', $rawSlug);
         update_post_meta($workspaceId, 'settings', wp_json_encode($settings));

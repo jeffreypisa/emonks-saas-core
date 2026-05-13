@@ -1,27 +1,28 @@
 # Architecture
 
-## Separation of concerns
-- Theme = presentatie
-- Plugin = logica/framework
+## Scheiding
+- Plugin: data, routing, permissies, modules, REST
+- Theme: alle frontend rendering (Twig) en styling
 
-## Core modules
-- Routing/Auth/Dashboard
-- Workspaces/Permissions/Statuses
-- Catalog (Plans/Features/Services)
-- Billing/Stripe/Webhooks
-- REST API
-- Onboarding
-- Logging
-- Admin Settings
+## Mapgrenzen
+- `includes/Core/`: generieke platformregels (accounts, permissions, policy, routing)
+- `includes/Modules/`: dienstspecifieke modules (Client Portal, later Guestbook)
+- `includes/Infrastructure/`: technische diensten (template loader, settings, logging, webhooks, rest wiring)
+- `templates/`: plugin defaults die door theme overschreven kunnen worden
+- `docs/`: architectuur, ADRs, security, API, implementatiekeuzes
 
-## Catalog model
-- `emonks_plan` (CPT)
-- `emonks_feature` (taxonomy)
-- `emonks_service` (taxonomy)
-- service term meta: `supported_features`
+## Core services (huidig)
+- Accounts + memberships
+- Workspaces als service instances
+- Policy service voor capability checks
+- Module registry voor lifecycle/toggles
+- Service items domein voor module-data
 
-## Capability model
-Feature toegang is 3-laags:
-- Service-level capability
-- Plan entitlement
-- Global operational flag
+## Rendering
+Plugin levert default templates.
+Theme overrides via `templates/emonks-saas/...` hebben prioriteit.
+
+## Module model
+- Contract via `ModuleInterface`
+- Registratie via `emonks_register_modules`
+- Enabled/disabled via settings

@@ -23,9 +23,11 @@ final class Activation
     public static function activate(): void
     {
         add_role('emonks_customer', 'Emonks Customer', ['read' => true]);
+        Accounts::registerPostType();
         Workspaces::registerPostType();
         Catalog::registerPlanPostType();
         Catalog::registerTaxonomies();
+        Memberships::install();
         Routes::registerRewriteRules();
         flush_rewrite_rules();
     }

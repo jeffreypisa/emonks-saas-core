@@ -1,0 +1,31 @@
+{% extends "base.twig" %}
+
+{% block head %}
+  <title>{{ cp_item.post_title|default("Client Portal Item") }} | Emonks</title>
+{% endblock %}
+
+{% block content %}
+<section class="section emonks-saas-section">
+<div class="container py-4 py-lg-5 emonks-account-shell">
+  <div class="row g-4">
+    <div class="col-12 col-lg-8">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+          <h1 class="h4 mb-3">{{ cp_item.post_title }}</h1>
+          {% set item_status = function('emonks_normalize_status', cp_item_status|default('open'), 'open') %}
+          <p class="mb-2"><strong>Status:</strong> <span class="badge {{ function('emonks_get_status_badge_class', item_status) }}">{{ function('emonks_get_status_label', item_status) }}</span></p>
+          <p class="text-muted mb-0">Item ID: {{ cp_item.ID }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-lg-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+          <a class="btn btn-outline-secondary w-100" href="{{ function('emonks_get_client_portal_url') }}">Terug naar overzicht</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+{% endblock %}
