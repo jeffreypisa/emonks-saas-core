@@ -18,17 +18,45 @@
               <div class="alert {{ function('emonks_alert_variant', key) }} alert-dismissible fade show mb-3" role="alert">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>
             {% endfor %}
           {% endif %}
+          {% if form_errors %}
+            {% for key, message in form_errors %}
+              <div class="alert alert-danger mb-3" role="alert">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
           <form method="post" class="vstack gap-3">
             {{ function('wp_nonce_field', 'emonks_login_action', 'emonks_nonce') }}
-            <div>
-              <label class="form-label" for="user_login">E-mail of gebruikersnaam</label>
-              <input id="user_login" name="user_login" class="form-control" required>
-            </div>
-            <div>
-              <label class="form-label" for="user_password">Wachtwoord</label>
-              <input id="user_password" name="user_password" type="password" class="form-control" required>
-            </div>
-            <button class="btn btn-primary" type="submit">Inloggen</button>
+            {% set login_form = form|default({}) %}
+            {% set login_fields = login_form.fields|default([]) %}
+            {% if login_fields is empty %}
+              <div>
+                <label class="form-label" for="user_login">E-mail of gebruikersnaam</label>
+                <input id="user_login" name="user_login" class="form-control" required>
+              </div>
+              <div>
+                <label class="form-label" for="user_password">Wachtwoord</label>
+                <input id="user_password" name="user_password" type="password" class="form-control" required>
+              </div>
+            {% else %}
+              {% for field in login_fields %}
+                {% set field_key = field.key|default('') %}
+                {% set field_type = field.type|default('text') %}
+                <div>
+                  <label class="form-label" for="{{ field_key }}">{{ field.label|default(field_key|capitalize) }}</label>
+                  <input
+                    id="{{ field_key }}"
+                    name="{{ field_key }}"
+                    type="{{ field_type == 'password' ? 'password' : (field_type == 'email' ? 'email' : 'text') }}"
+                    class="form-control"
+                    value="{{ field_type == 'password' ? '' : (form_values[field_key]|default(field.default|default(''))) }}"
+                    placeholder="{{ field.placeholder|default('') }}"
+                    {{ field.required ? 'required' : '' }}>
+                  {% if field.help %}
+                    <div class="form-text">{{ field.help }}</div>
+                  {% endif %}
+                </div>
+              {% endfor %}
+            {% endif %}
+            <button class="btn btn-primary" type="submit">{{ login_form.submit_label|default('Inloggen') }}</button>
           </form>
           <div class="d-flex flex-wrap gap-3 small mt-3">
             <a href="{{ function('wp_lostpassword_url') }}">Wachtwoord vergeten?</a>

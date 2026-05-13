@@ -68,6 +68,7 @@ final class Plugin
         }
 
         $registry->register(new Modules\ClientPortal\ClientPortalModule());
+        $registry->register(new Modules\Guestbook\GuestbookModule());
     }
 
     public function loadTextDomain(): void
@@ -114,6 +115,7 @@ final class Plugin
             'ModuleRegistry.php',
             'ModuleHealth.php',
             'Modules/ClientPortal/ClientPortalModule.php',
+            'Modules/Guestbook/GuestbookModule.php',
             'BillingProviderInterface.php',
             'StripeBillingProvider.php',
             'Features.php',

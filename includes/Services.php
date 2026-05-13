@@ -19,6 +19,7 @@ final class Services
     public function boot(): void
     {
         $this->registerServicesFromTerms();
+        $this->registerServicesFromSchemas();
         do_action('emonks_register_service_modules');
     }
 
@@ -103,6 +104,31 @@ final class Services
                     'plural' => $term->name,
                 ],
                 'supported_features' => $supported,
+            ]);
+        }
+    }
+
+    private function registerServicesFromSchemas(): void
+    {
+        $schemas = emonks_get_service_schemas();
+        $services = is_array($schemas['services'] ?? null) ? $schemas['services'] : [];
+        foreach ($services as $key => $schema) {
+            if (! is_array($schema)) {
+                continue;
+            }
+
+            $serviceKey = sanitize_key((string) $key);
+            if ($serviceKey === '' || isset(self::$registry[$serviceKey])) {
+                continue;
+            }
+
+            self::registerServiceType($serviceKey, [
+                'labels' => [
+                    'singular' => sanitize_text_field((string) ($schema['label'] ?? ucfirst($serviceKey))),
+                    'plural' => sanitize_text_field((string) ($schema['label'] ?? ucfirst($serviceKey) . 's')),
+                ],
+                'supported_features' => is_array($schema['capabilities'] ?? null) ? $schema['capabilities'] : [],
+                'fields' => is_array($schema['fields'] ?? null) ? $schema['fields'] : [],
             ]);
         }
     }

@@ -100,6 +100,27 @@ final class RestApi
                 ],
             ],
         ]);
+
+        register_rest_route('emonks/v1', '/config/forms/(?P<key>[a-z0-9_\\-]+)', [
+            'methods' => 'GET',
+            'callback' => [$this, 'configFormsGet'],
+            'permission_callback' => [$this, 'canManageConfig'],
+        ]);
+        register_rest_route('emonks/v1', '/config/forms/(?P<key>[a-z0-9_\\-]+)', [
+            'methods' => 'PUT,PATCH',
+            'callback' => [$this, 'configFormsUpdate'],
+            'permission_callback' => [$this, 'canManageConfig'],
+        ]);
+        register_rest_route('emonks/v1', '/config/services/(?P<key>[a-z0-9_\\-]+)', [
+            'methods' => 'GET',
+            'callback' => [$this, 'configServicesGet'],
+            'permission_callback' => [$this, 'canManageConfig'],
+        ]);
+        register_rest_route('emonks/v1', '/config/services/(?P<key>[a-z0-9_\\-]+)', [
+            'methods' => 'PUT,PATCH',
+            'callback' => [$this, 'configServicesUpdate'],
+            'permission_callback' => [$this, 'canManageConfig'],
+        ]);
     }
 
     public function health(): \WP_REST_Response
@@ -168,7 +189,7 @@ final class RestApi
 
         update_post_meta($id, 'account_id', $accountId);
         update_post_meta($id, 'service_type', $serviceType !== '' ? $serviceType : 'generic');
-        update_post_meta($id, 'module_key', $serviceType === 'client_portal' ? 'client_portal' : 'generic');
+        update_post_meta($id, 'module_key', in_array($serviceType, ['client_portal', 'guestbook'], true) ? $serviceType : 'generic');
         update_post_meta($id, 'workspace_status', 'draft');
         $slug = sanitize_title($title);
         if (! emonks_is_workspace_slug_available($slug, $id)) {
@@ -412,5 +433,52 @@ final class RestApi
 
         $vocabulary = emonks_status_vocabulary();
         return isset($vocabulary[$status]);
+    }
+
+    public function canManageConfig(): bool
+    {
+        return current_user_can('manage_options');
+    }
+
+    public function configFormsGet(\WP_REST_Request $request): \WP_REST_Response
+    {
+        $key = sanitize_key((string) $request['key']);
+        return new \WP_REST_Response(['key' => $key, 'schema' => emonks_get_form_schema($key)], 200);
+    }
+
+    public function configFormsUpdate(\WP_REST_Request $request): \WP_REST_Response
+    {
+        $key = sanitize_key((string) $request['key']);
+        $schema = $request->get_json_params();
+        if (! is_array($schema)) {
+            return emonks_rest_error('invalid_payload', 'Invalid schema payload', [], 422);
+        }
+
+        $all = emonks_get_form_schemas();
+        $forms = is_array($all['forms'] ?? null) ? $all['forms'] : [];
+        $forms[$key] = $schema;
+        emonks_update_setting('form_schemas', ['schema_version' => 1, 'forms' => $forms]);
+        return new \WP_REST_Response(['ok' => true], 200);
+    }
+
+    public function configServicesGet(\WP_REST_Request $request): \WP_REST_Response
+    {
+        $key = sanitize_key((string) $request['key']);
+        return new \WP_REST_Response(['key' => $key, 'schema' => emonks_get_service_schema($key)], 200);
+    }
+
+    public function configServicesUpdate(\WP_REST_Request $request): \WP_REST_Response
+    {
+        $key = sanitize_key((string) $request['key']);
+        $schema = $request->get_json_params();
+        if (! is_array($schema)) {
+            return emonks_rest_error('invalid_payload', 'Invalid schema payload', [], 422);
+        }
+
+        $all = emonks_get_service_schemas();
+        $services = is_array($all['services'] ?? null) ? $all['services'] : [];
+        $services[$key] = $schema;
+        emonks_update_setting('service_schemas', ['schema_version' => 1, 'services' => $services]);
+        return new \WP_REST_Response(['ok' => true], 200);
     }
 }

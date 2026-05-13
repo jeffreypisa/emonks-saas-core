@@ -54,6 +54,13 @@ final class Workspaces
         $requestedAccountId = absint((string) ($_POST['account_id'] ?? 0));
         $title = sanitize_text_field((string) ($_POST['title'] ?? 'Untitled workspace'));
         $serviceType = sanitize_key((string) ($_POST['service_type'] ?? 'generic'));
+        $formValidation = emonks_validate_form_payload('workspace_create', is_array($_POST) ? $_POST : []);
+        $formErrors = is_array($formValidation['errors'] ?? null) ? $formValidation['errors'] : [];
+        if (! empty($formErrors)) {
+            emonks_flash_add('workspace_error', implode(' ', array_values($formErrors)));
+            wp_safe_redirect($workspaceId > 0 ? emonks_get_account_url('workspaces/' . $workspaceId . '/edit') : emonks_get_account_url('workspaces'));
+            exit;
+        }
 
         $isNew = $workspaceId === 0;
 
@@ -101,7 +108,7 @@ final class Workspaces
         if ($serviceType === '' || ! array_key_exists($serviceType, Services::all())) {
             $serviceType = 'generic';
         }
-        $moduleKey = $serviceType === 'client_portal' ? 'client_portal' : 'generic';
+        $moduleKey = in_array($serviceType, ['client_portal', 'guestbook'], true) ? $serviceType : 'generic';
 
         $settingsRaw = (string) ($_POST['settings_json'] ?? '{}');
         $settings = json_decode($settingsRaw, true);
@@ -142,6 +149,7 @@ final class Workspaces
         update_post_meta($workspaceId, 'workspace_status', $workspaceStatus);
         update_post_meta($workspaceId, 'public_slug', $rawSlug);
         update_post_meta($workspaceId, 'settings', wp_json_encode($settings));
+        update_post_meta($workspaceId, 'service_data_json', wp_json_encode($this->collectServiceData($serviceType)));
         update_post_meta($workspaceId, 'created_by', $isNew ? $userId : (int) get_post_meta($workspaceId, 'created_by', true));
         update_post_meta($workspaceId, 'updated_at', current_time('mysql'));
 
@@ -149,5 +157,35 @@ final class Workspaces
 
         wp_safe_redirect(emonks_get_account_url('workspaces'));
         exit;
+    }
+
+    /** @return array<string,mixed> */
+    private function collectServiceData(string $serviceType): array
+    {
+        $schema = emonks_get_service_schema($serviceType);
+        $fields = is_array($schema['fields'] ?? null) ? $schema['fields'] : [];
+        $data = [];
+
+        foreach ($fields as $field) {
+            if (! is_array($field)) {
+                continue;
+            }
+
+            $key = sanitize_key((string) ($field['key'] ?? ''));
+            if ($key === '') {
+                continue;
+            }
+
+            $type = sanitize_key((string) ($field['type'] ?? 'text'));
+            $raw = (string) ($_POST['service_data_' . $key] ?? '');
+            $data[$key] = match ($type) {
+                'textarea' => sanitize_textarea_field($raw),
+                'email' => sanitize_email($raw),
+                'url' => esc_url_raw($raw),
+                default => sanitize_text_field($raw),
+            };
+        }
+
+        return $data;
     }
 }

@@ -27,20 +27,36 @@ final class Auth
             exit;
         }
 
+        $context = emonks_default_context();
+        $formSchema = emonks_get_form_schema('auth_login');
+        $context['form'] = $formSchema;
+        $context['form_values'] = [];
+        $context['form_errors'] = [];
+
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             check_admin_referer('emonks_login_action', 'emonks_nonce');
+            $validated = emonks_validate_form_payload('auth_login', is_array($_POST) ? $_POST : []);
+            $values = is_array($validated['values'] ?? null) ? $validated['values'] : [];
+            $errors = is_array($validated['errors'] ?? null) ? $validated['errors'] : [];
+            $context['form_values'] = $values;
+            $context['form_errors'] = $errors;
 
-            $login = sanitize_text_field((string) ($_POST['user_login'] ?? ''));
+            $login = sanitize_text_field((string) ($values['user_login'] ?? $_POST['user_login'] ?? ''));
             if ($this->isRateLimited('login', $login)) {
                 do_action('emonks_auth_login_blocked', $login);
                 emonks_flash_add('auth_error', 'Too many login attempts. Please try again later.');
-                emonks_render_template('account/login.twig', emonks_default_context());
+                emonks_render_template('account/login.twig', $context);
+                return;
+            }
+
+            if (! empty($errors)) {
+                emonks_render_template('account/login.twig', $context);
                 return;
             }
 
             $creds = [
                 'user_login' => $login,
-                'user_password' => (string) ($_POST['user_password'] ?? ''),
+                'user_password' => (string) ($values['user_password'] ?? $_POST['user_password'] ?? ''),
                 'remember' => true,
             ];
 
@@ -57,7 +73,7 @@ final class Auth
             do_action('emonks_auth_login_failed', $creds['user_login'], $user);
         }
 
-        emonks_render_template('account/login.twig', emonks_default_context());
+        emonks_render_template('account/login.twig', $context);
     }
 
     public function handleRegisterRoute(): void
@@ -67,15 +83,31 @@ final class Auth
             exit;
         }
 
+        $context = emonks_default_context();
+        $formSchema = emonks_get_form_schema('auth_register');
+        $context['form'] = $formSchema;
+        $context['form_values'] = [];
+        $context['form_errors'] = [];
+
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             check_admin_referer('emonks_register_action', 'emonks_nonce');
+            $validated = emonks_validate_form_payload('auth_register', is_array($_POST) ? $_POST : []);
+            $values = is_array($validated['values'] ?? null) ? $validated['values'] : [];
+            $errors = is_array($validated['errors'] ?? null) ? $validated['errors'] : [];
+            $context['form_values'] = $values;
+            $context['form_errors'] = $errors;
 
-            $email = sanitize_email((string) ($_POST['email'] ?? ''));
-            $password = (string) ($_POST['password'] ?? '');
+            $email = sanitize_email((string) ($values['email'] ?? $_POST['email'] ?? ''));
+            $password = (string) ($values['password'] ?? $_POST['password'] ?? '');
             if ($this->isRateLimited('register', $email)) {
                 do_action('emonks_auth_register_blocked', $email);
                 emonks_flash_add('auth_error', 'Too many signup attempts. Please try again later.');
-                emonks_render_template('account/register.twig', emonks_default_context());
+                emonks_render_template('account/register.twig', $context);
+                return;
+            }
+
+            if (! empty($errors)) {
+                emonks_render_template('account/register.twig', $context);
                 return;
             }
 
@@ -99,7 +131,7 @@ final class Auth
             emonks_flash_add('auth_error', 'Signup failed. Use a valid email and a password of at least 8 characters.');
         }
 
-        emonks_render_template('account/register.twig', emonks_default_context());
+        emonks_render_template('account/register.twig', $context);
     }
 
     public function handleLogoutRoute(): void

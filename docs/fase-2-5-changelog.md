@@ -79,3 +79,19 @@ Core aanscherpen voor een stabiele multiservice basis met:
 - Extra migraties toevoegen in runner zodra nieuwe tabellen/schema’s volgen.
 - QA smoke-tests als geautomatiseerde test-suite formaliseren (nu documentair + handmatig).
 - Guestbook module pas starten na formele “fase 3” go/no-go.
+
+## Update: Fase 3X dynamische configuratie
+
+- Guestbook module nu actief in module-registry en plugin bootstrap.
+- Form schema helpers toegevoegd met runtime validatie:
+  - `emonks_get_form_schema()`
+  - `emonks_validate_form_payload()`
+- Service schema helpers toegevoegd:
+  - `emonks_get_service_schema()`
+  - `emonks_get_workspace_service_data()`
+- Workspace service-data wordt opgeslagen in `service_data_json`.
+- Publieke rendering kan service-specifiek template kiezen via `service_schema.render_hints.template`.
+- Nieuw adminscherm: Form Builder (beheer van form/service schema JSON).
+- Nieuwe admin REST config endpoints:
+  - `GET/PUT /emonks/v1/config/forms/{key}`
+  - `GET/PUT /emonks/v1/config/services/{key}`

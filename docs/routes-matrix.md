@@ -35,6 +35,10 @@ Deze matrix is de centrale referentie voor taak 21: **route -> required capabili
 | `POST` | `/service-items` | `canManageClientPortal` | `Policy::can(...,'cp_manage',...)` | workspace account-id wordt gebruikt |
 | `GET` | `/service-items/{id}` | `canViewClientPortalItem` | `Policy::can(...,'cp_view',...)` | `emonks_can_access_entity_account('service_item', ...)` |
 | `PUT/PATCH` | `/service-items/{id}` | `canManageClientPortalItem` | `Policy::can(...,'cp_manage',...)` | `emonks_can_access_entity_account('service_item', ...)` |
+| `GET` | `/config/forms/{key}` | `canManageConfig` | `manage_options` | admin-only |
+| `PUT/PATCH` | `/config/forms/{key}` | `canManageConfig` | `manage_options` | admin-only |
+| `GET` | `/config/services/{key}` | `canManageConfig` | `manage_options` | admin-only |
+| `PUT/PATCH` | `/config/services/{key}` | `canManageConfig` | `manage_options` | admin-only |
 
 ## Form actions (`admin-post.php`)
 

@@ -87,3 +87,23 @@ Pass criteria:
 
 Pass criteria:
 - Kern-UX van fase 1/2 blijft intact.
+
+## 7) Guestbook MVP smoke
+
+1. Maak workspace met `service_type=guestbook`.
+2. Vul servicevelden in op workspace create/edit.
+3. Zet status op `published` en zorg voor actieve subscription.
+4. Open publieke URL `/g/{slug}`.
+5. Verwacht: guestbook template render met ingevulde velden.
+6. Zet module `guestbook` uit in admin.
+7. Open dezelfde URL opnieuw.
+8. Verwacht: 404.
+
+## 8) Dynamische form schema smoke
+
+1. Open admin -> Form Builder.
+2. Pas label van `auth_login.user_login` aan in form schema JSON.
+3. Herlaad loginpagina.
+4. Verwacht: aangepast label zichtbaar.
+5. Maak schema JSON expres ongeldig en sla op.
+6. Verwacht: waarschuwing + bestaande schema blijft actief.

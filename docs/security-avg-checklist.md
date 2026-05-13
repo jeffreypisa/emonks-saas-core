@@ -60,6 +60,11 @@ Gebruik deze lijst per endpoint/form voordat een feature “done” is.
 - [ ] nonce `emonks_saas_save_settings`
 - [ ] settings sanitizer toegepast
 
+## Form Builder config (nieuw)
+- [ ] Config REST endpoints alleen voor `manage_options`.
+- [ ] JSON schema input wordt gevalideerd op array-structuur vóór opslag.
+- [ ] Runtime form validatie blijft server-side (niet vertrouwen op frontend).
+
 ## 4) AVG checks (praktisch MVP)
 
 - [ ] Bewaar alleen noodzakelijke persoonsgegevens (nu: account/user links, e-mail via WP user).

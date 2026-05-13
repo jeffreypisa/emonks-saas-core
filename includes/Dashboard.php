@@ -34,6 +34,8 @@ final class Dashboard
         $context['workspace_status_counts'] = emonks_get_workspace_status_counts($userId);
         $context['dashboard_cards'] = apply_filters('emonks_dashboard_cards', [], $userId);
         $context['service_types'] = Services::all();
+        $context['service_schemas'] = emonks_get_service_schemas();
+        $context['workspace_create_form'] = emonks_get_form_schema('workspace_create');
         $context['workspace_statuses'] = WorkspaceStatuses::all();
         $context['next_action'] = $this->resolveNextAction($userId, $context);
         $context['admin_post'] = [
@@ -61,6 +63,7 @@ final class Dashboard
                 wp_die(esc_html__('You cannot access this workspace.', 'emonks-saas-core'), 403);
             }
             $context['workspace'] = get_post($workspaceId);
+            $context['workspace_service_data'] = emonks_get_workspace_service_data($workspaceId);
         }
 
         if ($route === 'account_billing') {
@@ -165,7 +168,15 @@ final class Dashboard
         $context['owner'] = get_userdata($ownerId);
         $context['service_type'] = emonks_get_workspace_meta($workspaceId, 'service_type', '');
         $context['settings'] = emonks_get_workspace_meta($workspaceId, 'settings', []);
-
-        emonks_render_template('public/workspace.twig', $context);
+        $context['service_data'] = emonks_get_workspace_service_data($workspaceId);
+        $serviceSchema = emonks_get_service_schema((string) $context['service_type']);
+        $context['service_schema'] = $serviceSchema;
+        if ((string) $context['service_type'] === 'guestbook' && ! emonks_module_enabled('guestbook')) {
+            status_header(404);
+            return;
+        }
+        $preferredTemplate = sanitize_text_field((string) ($serviceSchema['render_hints']['template'] ?? ''));
+        $template = $preferredTemplate !== '' ? $preferredTemplate : 'public/workspace.twig';
+        emonks_render_template($template, $context);
     }
 }

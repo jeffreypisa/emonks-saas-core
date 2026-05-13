@@ -23,9 +23,9 @@ final class Policy
         $capability = sanitize_key($capability);
 
         $matrix = [
-            'account_owner' => ['cp_view', 'cp_manage', 'cp_create', 'cp_update'],
-            'account_manager' => ['cp_view', 'cp_create', 'cp_update'],
-            'account_member' => ['cp_view'],
+            'account_owner' => ['cp_view', 'cp_manage', 'cp_create', 'cp_update', 'gb_view', 'gb_manage'],
+            'account_manager' => ['cp_view', 'cp_create', 'cp_update', 'gb_view', 'gb_manage'],
+            'account_member' => ['cp_view', 'gb_view'],
         ];
 
         $allowed = in_array($capability, $matrix[$role] ?? [], true);

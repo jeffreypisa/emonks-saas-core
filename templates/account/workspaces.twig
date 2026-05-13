@@ -61,6 +61,11 @@
           </select>
           <div class="form-text">Published vereist afgeronde onboarding en actieve subscription.</div>
         </div>
+        <div class="col-12 d-none" id="service-fields-wrap">
+          <hr class="my-2">
+          <h3 class="h6 mb-3">Service velden</h3>
+          <div id="service-fields-grid" class="row g-3"></div>
+        </div>
         <div class="col-12">
           <button class="btn btn-primary" type="submit">Workspace opslaan</button>
         </div>
@@ -112,4 +117,73 @@
   </div>
 </div>
 </section>
+<script>
+  (function () {
+    var serviceSelect = document.getElementById('ws_service');
+    var wrap = document.getElementById('service-fields-wrap');
+    var grid = document.getElementById('service-fields-grid');
+    var schemas = {{ service_schemas.services|default({})|json_encode|raw }};
+    if (!serviceSelect || !wrap || !grid) { return; }
+
+    function inputType(fieldType) {
+      if (fieldType === 'email') { return 'email'; }
+      if (fieldType === 'url') { return 'url'; }
+      return 'text';
+    }
+
+    function renderFields() {
+      var serviceKey = serviceSelect.value;
+      var schema = schemas[serviceKey] || null;
+      var fields = schema && Array.isArray(schema.fields) ? schema.fields : [];
+      grid.innerHTML = '';
+
+      if (!fields.length) {
+        wrap.classList.add('d-none');
+        return;
+      }
+
+      fields.forEach(function (field) {
+        if (!field || !field.key) { return; }
+        var col = document.createElement('div');
+        col.className = (field.type === 'textarea') ? 'col-12' : 'col-12 col-md-6';
+
+        var label = document.createElement('label');
+        label.className = 'form-label';
+        label.setAttribute('for', 'service_data_' + field.key);
+        label.textContent = field.label || field.key;
+        col.appendChild(label);
+
+        var input;
+        if (field.type === 'textarea') {
+          input = document.createElement('textarea');
+          input.rows = 3;
+        } else {
+          input = document.createElement('input');
+          input.type = inputType(field.type || 'text');
+        }
+        input.className = 'form-control';
+        input.id = 'service_data_' + field.key;
+        input.name = 'service_data_' + field.key;
+        input.placeholder = field.placeholder || '';
+        if (field.required) { input.required = true; }
+        if (field.default) { input.value = field.default; }
+        col.appendChild(input);
+
+        if (field.help) {
+          var help = document.createElement('div');
+          help.className = 'form-text';
+          help.textContent = field.help;
+          col.appendChild(help);
+        }
+
+        grid.appendChild(col);
+      });
+
+      wrap.classList.remove('d-none');
+    }
+
+    serviceSelect.addEventListener('change', renderFields);
+    renderFields();
+  })();
+</script>
 {% endblock %}

@@ -46,6 +46,8 @@ final class ModuleHealth
         if ($moduleKey === 'client_portal') {
             $checks['modules/client-portal/index.twig'] = emonks_template_exists('modules/client-portal/index.twig');
             $checks['modules/client-portal/item.twig'] = emonks_template_exists('modules/client-portal/item.twig');
+        } elseif ($moduleKey === 'guestbook') {
+            $checks['public/guestbook.twig'] = emonks_template_exists('public/guestbook.twig');
         }
 
         return $checks;
@@ -58,6 +60,8 @@ final class ModuleHealth
         if ($moduleKey === 'client_portal') {
             $checks['account_client_portal'] = true;
             $checks['account_client_portal_item'] = true;
+        } elseif ($moduleKey === 'guestbook') {
+            $checks['public_workspace'] = true;
         }
 
         return $checks;

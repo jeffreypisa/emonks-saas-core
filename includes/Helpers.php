@@ -173,6 +173,230 @@ function emonks_template_exists(string $template): bool
     return $loader->locate($template) !== null;
 }
 
+/** @return array<string,mixed> */
+function emonks_default_form_schemas(): array
+{
+    return [
+        'schema_version' => 1,
+        'forms' => [
+            'auth_login' => [
+                'key' => 'auth_login',
+                'action' => '',
+                'nonce_action' => 'emonks_login_action',
+                'submit_label' => 'Inloggen',
+                'fields' => [
+                    ['key' => 'user_login', 'type' => 'text', 'label' => 'E-mail of gebruikersnaam', 'required' => true, 'placeholder' => '', 'help' => '', 'default' => '', 'order' => 10, 'rules' => []],
+                    ['key' => 'user_password', 'type' => 'password', 'label' => 'Wachtwoord', 'required' => true, 'placeholder' => '', 'help' => '', 'default' => '', 'order' => 20, 'rules' => []],
+                ],
+            ],
+            'auth_register' => [
+                'key' => 'auth_register',
+                'action' => '',
+                'nonce_action' => 'emonks_register_action',
+                'submit_label' => 'Registreren',
+                'fields' => [
+                    ['key' => 'email', 'type' => 'email', 'label' => 'E-mailadres', 'required' => true, 'placeholder' => '', 'help' => '', 'default' => '', 'order' => 10, 'rules' => []],
+                    ['key' => 'password', 'type' => 'password', 'label' => 'Wachtwoord', 'required' => true, 'placeholder' => '', 'help' => '', 'default' => '', 'order' => 20, 'rules' => [['type' => 'min_length', 'value' => 8]]],
+                ],
+            ],
+            'workspace_create' => [
+                'key' => 'workspace_create',
+                'action' => '',
+                'nonce_action' => 'emonks_workspace_save',
+                'submit_label' => 'Workspace opslaan',
+                'fields' => [
+                    ['key' => 'title', 'type' => 'text', 'label' => 'Naam', 'required' => true, 'placeholder' => 'Bijv. Main workspace', 'help' => '', 'default' => '', 'order' => 10, 'rules' => []],
+                    ['key' => 'service_type', 'type' => 'select', 'label' => 'Service type', 'required' => true, 'placeholder' => '', 'help' => '', 'default' => 'generic', 'order' => 20, 'rules' => []],
+                    ['key' => 'public_slug', 'type' => 'text', 'label' => 'Public slug', 'required' => false, 'placeholder' => 'mijn-workspace', 'help' => 'We checken automatisch of de slug beschikbaar is.', 'default' => '', 'order' => 30, 'rules' => []],
+                    ['key' => 'workspace_status', 'type' => 'select', 'label' => 'Status', 'required' => true, 'placeholder' => '', 'help' => 'Published vereist afgeronde onboarding en actieve subscription.', 'default' => 'draft', 'order' => 40, 'rules' => []],
+                ],
+            ],
+        ],
+    ];
+}
+
+/** @return array<string,mixed> */
+function emonks_default_service_schemas(): array
+{
+    return [
+        'schema_version' => 1,
+        'services' => [
+            'guestbook' => [
+                'key' => 'guestbook',
+                'label' => 'Guestbook',
+                'capabilities' => ['gb_view', 'gb_manage'],
+                'render_hints' => ['template' => 'public/guestbook.twig'],
+                'fields' => [
+                    ['key' => 'welcome', 'type' => 'textarea', 'label' => 'Welkom', 'required' => false, 'placeholder' => '', 'help' => '', 'default' => '', 'order' => 10],
+                    ['key' => 'wifi_name', 'type' => 'text', 'label' => 'WiFi naam', 'required' => false, 'placeholder' => '', 'help' => '', 'default' => '', 'order' => 20],
+                    ['key' => 'wifi_password', 'type' => 'text', 'label' => 'WiFi wachtwoord', 'required' => false, 'placeholder' => '', 'help' => '', 'default' => '', 'order' => 30],
+                    ['key' => 'checkin', 'type' => 'text', 'label' => 'Check-in', 'required' => false, 'placeholder' => '', 'help' => '', 'default' => '', 'order' => 40],
+                    ['key' => 'checkout', 'type' => 'text', 'label' => 'Check-out', 'required' => false, 'placeholder' => '', 'help' => '', 'default' => '', 'order' => 50],
+                    ['key' => 'parking', 'type' => 'textarea', 'label' => 'Parkeren', 'required' => false, 'placeholder' => '', 'help' => '', 'default' => '', 'order' => 60],
+                    ['key' => 'house_rules', 'type' => 'textarea', 'label' => 'Huisregels', 'required' => false, 'placeholder' => '', 'help' => '', 'default' => '', 'order' => 70],
+                    ['key' => 'emergency', 'type' => 'textarea', 'label' => 'Noodnummers', 'required' => false, 'placeholder' => '', 'help' => '', 'default' => '', 'order' => 80],
+                    ['key' => 'contact', 'type' => 'textarea', 'label' => 'Contact', 'required' => false, 'placeholder' => '', 'help' => '', 'default' => '', 'order' => 90],
+                    ['key' => 'review_link', 'type' => 'url', 'label' => 'Review link', 'required' => false, 'placeholder' => '', 'help' => '', 'default' => '', 'order' => 100],
+                ],
+            ],
+        ],
+    ];
+}
+
+/** @return array<string,mixed> */
+function emonks_get_form_schemas(): array
+{
+    $defaults = emonks_default_form_schemas();
+    $raw = emonks_get_setting('form_schemas', []);
+    if (! is_array($raw)) {
+        return $defaults;
+    }
+
+    $forms = is_array($raw['forms'] ?? null) ? $raw['forms'] : [];
+    if (empty($forms)) {
+        return $defaults;
+    }
+
+    return [
+        'schema_version' => (int) ($raw['schema_version'] ?? 1),
+        'forms' => $forms,
+    ];
+}
+
+/** @return array<string,mixed> */
+function emonks_get_form_schema(string $formKey): array
+{
+    $all = emonks_get_form_schemas();
+    $formKey = sanitize_key($formKey);
+    $form = $all['forms'][$formKey] ?? [];
+    if (! is_array($form)) {
+        return [];
+    }
+
+    $fields = is_array($form['fields'] ?? null) ? $form['fields'] : [];
+    usort($fields, static fn($a, $b) => (int) ($a['order'] ?? 0) <=> (int) ($b['order'] ?? 0));
+    $form['fields'] = $fields;
+    $form['key'] = $formKey;
+    return $form;
+}
+
+/** @return array<string,mixed> */
+function emonks_get_service_schemas(): array
+{
+    $defaults = emonks_default_service_schemas();
+    $raw = emonks_get_setting('service_schemas', []);
+    if (! is_array($raw)) {
+        return $defaults;
+    }
+
+    $services = is_array($raw['services'] ?? null) ? $raw['services'] : [];
+    if (empty($services)) {
+        return $defaults;
+    }
+
+    return [
+        'schema_version' => (int) ($raw['schema_version'] ?? 1),
+        'services' => $services,
+    ];
+}
+
+/** @return array<string,mixed> */
+function emonks_get_service_schema(string $serviceKey): array
+{
+    $all = emonks_get_service_schemas();
+    $serviceKey = sanitize_key($serviceKey);
+    $schema = $all['services'][$serviceKey] ?? [];
+    if (! is_array($schema)) {
+        return [];
+    }
+
+    $fields = is_array($schema['fields'] ?? null) ? $schema['fields'] : [];
+    usort($fields, static fn($a, $b) => (int) ($a['order'] ?? 0) <=> (int) ($b['order'] ?? 0));
+    $schema['fields'] = $fields;
+    $schema['key'] = $serviceKey;
+    return $schema;
+}
+
+/** @return array<string,mixed> */
+function emonks_get_workspace_service_data(int $workspaceId): array
+{
+    $raw = emonks_get_workspace_meta($workspaceId, 'service_data_json', '{}');
+    $decoded = json_decode((string) $raw, true);
+    return is_array($decoded) ? $decoded : [];
+}
+
+/** @return array{values:array<string,mixed>,errors:array<string,string>} */
+function emonks_validate_form_payload(string $formKey, array $payload): array
+{
+    $schema = emonks_get_form_schema($formKey);
+    $fields = is_array($schema['fields'] ?? null) ? $schema['fields'] : [];
+    $values = [];
+    $errors = [];
+
+    foreach ($fields as $field) {
+        if (! is_array($field)) {
+            continue;
+        }
+
+        $key = sanitize_key((string) ($field['key'] ?? ''));
+        if ($key === '') {
+            continue;
+        }
+
+        $type = sanitize_key((string) ($field['type'] ?? 'text'));
+        $label = sanitize_text_field((string) ($field['label'] ?? $key));
+        $required = (bool) ($field['required'] ?? false);
+        $raw = $payload[$key] ?? '';
+        $raw = is_scalar($raw) ? (string) $raw : '';
+
+        $value = match ($type) {
+            'email' => sanitize_email($raw),
+            'url' => esc_url_raw($raw),
+            'textarea' => sanitize_textarea_field($raw),
+            default => sanitize_text_field($raw),
+        };
+
+        if ($required && $value === '') {
+            $errors[$key] = sprintf('%s is verplicht.', $label);
+        }
+
+        $rules = is_array($field['rules'] ?? null) ? $field['rules'] : [];
+        foreach ($rules as $rule) {
+            if (! is_array($rule)) {
+                continue;
+            }
+
+            $ruleType = sanitize_key((string) ($rule['type'] ?? ''));
+            $ruleValue = $rule['value'] ?? null;
+            if ($ruleType === 'min_length' && is_numeric($ruleValue) && strlen($value) < (int) $ruleValue && $value !== '') {
+                $errors[$key] = sprintf('%s moet minimaal %d tekens bevatten.', $label, (int) $ruleValue);
+            }
+            if ($ruleType === 'max_length' && is_numeric($ruleValue) && strlen($value) > (int) $ruleValue && $value !== '') {
+                $errors[$key] = sprintf('%s mag maximaal %d tekens bevatten.', $label, (int) $ruleValue);
+            }
+        }
+
+        if ($type === 'email' && $value !== '' && ! is_email($value)) {
+            $errors[$key] = sprintf('%s is ongeldig.', $label);
+        }
+
+        if ($type === 'url' && $value !== '' && ! filter_var($value, FILTER_VALIDATE_URL)) {
+            $errors[$key] = sprintf('%s is ongeldig.', $label);
+        }
+
+        if ($type === 'select') {
+            $options = is_array($field['options'] ?? null) ? $field['options'] : [];
+            if (! empty($options) && $value !== '' && ! array_key_exists($value, $options)) {
+                $errors[$key] = sprintf('%s heeft een ongeldige waarde.', $label);
+            }
+        }
+
+        $values[$key] = $value;
+    }
+
+    return ['values' => $values, 'errors' => $errors];
+}
+
 function emonks_get_user_workspaces(int $userId): array
 {
     $baseArgs = [

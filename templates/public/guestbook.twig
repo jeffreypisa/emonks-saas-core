@@ -1,0 +1,82 @@
+{% extends "base.twig" %}
+
+{% block head %}
+  <title>{{ workspace.post_title }} | Guestbook | Emonks</title>
+{% endblock %}
+
+{% block content %}
+<section class="section emonks-saas-section">
+<div class="container py-4 py-lg-5">
+  <div class="row g-4">
+    <div class="col-12">
+      <article class="card border-0 shadow-sm">
+        <div class="card-body p-4 p-lg-5">
+          <p class="text-uppercase small text-muted mb-2">Digitale gastenmap</p>
+          <h1 class="h3 mb-3">{{ workspace.post_title }}</h1>
+          <p class="mb-0">{{ service_data.welcome|default('Welkom! Deze gastenmap wordt binnenkort aangevuld.') }}</p>
+        </div>
+      </article>
+    </div>
+
+    <div class="col-12 col-lg-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body p-4">
+          <h2 class="h5 mb-3">WiFi</h2>
+          <p class="mb-1"><strong>Naam:</strong> {{ service_data.wifi_name|default('Niet ingesteld') }}</p>
+          <p class="mb-0"><strong>Wachtwoord:</strong> {{ service_data.wifi_password|default('Niet ingesteld') }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body p-4">
+          <h2 class="h5 mb-3">Check-in / Check-out</h2>
+          <p class="mb-1"><strong>Check-in:</strong> {{ service_data.checkin|default('Niet ingesteld') }}</p>
+          <p class="mb-0"><strong>Check-out:</strong> {{ service_data.checkout|default('Niet ingesteld') }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+          <h2 class="h5 mb-3">Parkeren</h2>
+          <p class="mb-0">{{ service_data.parking|default('Niet ingesteld.') }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+          <h2 class="h5 mb-3">Huisregels</h2>
+          <p class="mb-0">{{ service_data.house_rules|default('Niet ingesteld.') }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body p-4">
+          <h2 class="h5 mb-3">Noodnummers</h2>
+          <p class="mb-0">{{ service_data.emergency|default('Niet ingesteld.') }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body p-4">
+          <h2 class="h5 mb-3">Contact</h2>
+          <p class="mb-3">{{ service_data.contact|default('Niet ingesteld.') }}</p>
+          {% if service_data.review_link %}
+            <a href="{{ service_data.review_link }}" class="btn btn-primary" target="_blank" rel="noopener">Laat een review achter</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+{% endblock %}
