@@ -10,6 +10,7 @@ final class Shortcodes
         add_shortcode('emonks_form', [$this, 'renderFormShortcode']);
         add_shortcode('emonks_workspace_list', [$this, 'renderWorkspaceListShortcode']);
         add_shortcode('emonks_account_link', [$this, 'renderAccountLinkShortcode']);
+        add_shortcode('emonks_user_menu', [$this, 'renderUserMenuShortcode']);
     }
 
     /** @return array<int,array<string,string>> */
@@ -30,6 +31,11 @@ final class Shortcodes
                 'tag' => 'emonks_account_link',
                 'example' => '[emonks_account_link suffix="billing" label="Ga naar billing"]',
                 'description' => 'Toont een link naar account of een account-subroute.',
+            ],
+            [
+                'tag' => 'emonks_user_menu',
+                'example' => '[emonks_user_menu]',
+                'description' => 'Toont het profielmenu van de ingelogde gebruiker.',
             ],
         ];
     }
@@ -172,6 +178,17 @@ final class Shortcodes
         $url = emonks_get_account_url($suffix);
 
         return '<a class="' . esc_attr($class) . '" href="' . esc_url($url) . '">' . esc_html($label) . '</a>';
+    }
+
+    /** @param array<string,mixed> $atts */
+    public function renderUserMenuShortcode(array $atts = []): string
+    {
+        $service = Plugin::instance()->get('user_menu');
+        if (! $service instanceof UserMenu) {
+            return '';
+        }
+
+        return $service->renderShortcode();
     }
 
     /** @param array<string,mixed> $field */

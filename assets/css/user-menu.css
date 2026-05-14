@@ -1,0 +1,55 @@
+.emonks-user-menu-shortcode {
+  position: relative;
+  display: inline-block;
+}
+
+.emonks-user-menu-trigger {
+  border: 1px solid #d0d7de;
+  background: #fff;
+  border-radius: 999px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.emonks-user-menu-trigger-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.emonks-user-menu-avatar {
+  border-radius: 999px;
+  width: 28px;
+  height: 28px;
+}
+
+.emonks-user-menu-dropdown {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 6px;
+  position: absolute;
+  right: 0;
+  min-width: 190px;
+  border: 1px solid #d0d7de;
+  border-radius: 10px;
+  background: #fff;
+  z-index: 999;
+}
+
+.emonks-user-menu-dropdown a {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+
+.emonks-user-menu-dropdown a:hover {
+  background: #f3f4f6;
+}
+
+/* Laat bij het profielmenu alleen de theme-chevron zien, niet de extra Bootstrap caret. */
+.emonks-user-menu > .dropdown-toggle::after,
+.menu-item.emonks-user-menu > .dropdown-toggle::after {
+  display: none !important;
+}

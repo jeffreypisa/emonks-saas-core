@@ -170,6 +170,16 @@ function emonks_template_exists(string $template): bool
     return $loader->locate($template) !== null;
 }
 
+function emonks_render_user_menu(): string
+{
+    $service = Plugin::instance()->get('user_menu');
+    if (! $service instanceof Emonks\SaasCore\UserMenu) {
+        return '';
+    }
+
+    return $service->renderShortcode();
+}
+
 /** @return array<string,mixed> */
 function emonks_default_field_library(): array
 {
@@ -252,6 +262,243 @@ function emonks_default_form_templates(): array
 function emonks_default_service_schemas(): array
 {
     return ['schema_version' => 1, 'config_model' => 'dynamic_services_v1', 'services' => []];
+}
+
+/** @return array<string,mixed> */
+function emonks_default_email_templates(): array
+{
+    $today = wp_date('Y-m-d');
+    return [
+        'schema_version' => 1,
+        'templates' => [
+            'account_registered' => [
+                'key' => 'account_registered',
+                'label' => 'Account geregistreerd',
+                'enabled' => true,
+                'trigger' => 'emonks_account_registered',
+                'recipients' => ['targets' => ['current_user'], 'extra' => []],
+                'subject' => 'Welkom bij {{ system.site_name }}',
+                'body_html' => '<p>Hi {{ user.display_name }},</p><p>Welkom bij {{ system.site_name }}.</p>',
+                'body_text' => "Hi {{ user.display_name }},\n\nWelkom bij {{ system.site_name }}.",
+                'from_name' => '',
+                'from_email' => '',
+                'reply_to' => '',
+                'conditions' => [],
+                'updated_at' => $today,
+            ],
+            'workspace_created' => [
+                'key' => 'workspace_created',
+                'label' => 'Workspace aangemaakt',
+                'enabled' => true,
+                'trigger' => 'emonks_workspace_created',
+                'recipients' => ['targets' => ['current_user'], 'extra' => []],
+                'subject' => 'Workspace aangemaakt: {{ workspace.title }}',
+                'body_html' => '<p>Je workspace <strong>{{ workspace.title }}</strong> is aangemaakt.</p>',
+                'body_text' => "Je workspace {{ workspace.title }} is aangemaakt.",
+                'from_name' => '',
+                'from_email' => '',
+                'reply_to' => '',
+                'conditions' => [],
+                'updated_at' => $today,
+            ],
+            'workspace_updated' => [
+                'key' => 'workspace_updated',
+                'label' => 'Workspace bijgewerkt',
+                'enabled' => true,
+                'trigger' => 'emonks_workspace_updated',
+                'recipients' => ['targets' => ['current_user'], 'extra' => []],
+                'subject' => 'Workspace bijgewerkt: {{ workspace.title }}',
+                'body_html' => '<p>Je workspace <strong>{{ workspace.title }}</strong> is bijgewerkt.</p>',
+                'body_text' => "Je workspace {{ workspace.title }} is bijgewerkt.",
+                'from_name' => '',
+                'from_email' => '',
+                'reply_to' => '',
+                'conditions' => [],
+                'updated_at' => $today,
+            ],
+            'billing_plan_changed' => [
+                'key' => 'billing_plan_changed',
+                'label' => 'Plan wijziging',
+                'enabled' => true,
+                'trigger' => 'emonks_billing_plan_changed',
+                'recipients' => ['targets' => ['current_user'], 'extra' => []],
+                'subject' => 'Plan gewijzigd naar {{ billing.target_plan }}',
+                'body_html' => '<p>Je plan is gewijzigd van {{ billing.current_plan }} naar {{ billing.target_plan }}.</p>',
+                'body_text' => "Je plan is gewijzigd van {{ billing.current_plan }} naar {{ billing.target_plan }}.",
+                'from_name' => '',
+                'from_email' => '',
+                'reply_to' => '',
+                'conditions' => [],
+                'updated_at' => $today,
+            ],
+            'auth_login_failed' => [
+                'key' => 'auth_login_failed',
+                'label' => 'Login mislukt',
+                'enabled' => false,
+                'trigger' => 'emonks_auth_login_failed',
+                'recipients' => ['targets' => ['site_admin'], 'extra' => []],
+                'subject' => 'Mislukte login poging',
+                'body_html' => '<p>Login mislukt voor: {{ user.email }}</p>',
+                'body_text' => 'Login mislukt voor: {{ user.email }}',
+                'from_name' => '',
+                'from_email' => '',
+                'reply_to' => '',
+                'conditions' => [],
+                'updated_at' => $today,
+            ],
+        ],
+    ];
+}
+
+/** @return array<string,mixed> */
+function emonks_get_email_templates(): array
+{
+    $defaults = emonks_default_email_templates();
+    $raw = emonks_get_setting('email_templates', []);
+    if (! is_array($raw) || ! is_array($raw['templates'] ?? null) || empty($raw['templates'])) {
+        return $defaults;
+    }
+
+    return ['schema_version' => (int) ($raw['schema_version'] ?? 1), 'templates' => $raw['templates']];
+}
+
+/** @return array<string,mixed> */
+function emonks_get_email_template(string $templateKey): array
+{
+    $templateKey = sanitize_key($templateKey);
+    $templates = emonks_get_email_templates()['templates'] ?? [];
+    $template = is_array($templates[$templateKey] ?? null) ? $templates[$templateKey] : [];
+    if (empty($template)) {
+        return [];
+    }
+
+    $template['key'] = $templateKey;
+    return $template;
+}
+
+/** @param array<string,mixed> $context @return array<string,mixed> */
+function emonks_resolve_email_template(string $templateKey, array $context = []): array
+{
+    $template = emonks_get_email_template($templateKey);
+    if (empty($template)) {
+        return [];
+    }
+
+    $template['enabled'] = ! empty($template['enabled']);
+    $template['label'] = sanitize_text_field((string) ($template['label'] ?? $templateKey));
+    $template['trigger'] = sanitize_key((string) ($template['trigger'] ?? ''));
+    $template['subject'] = (string) ($template['subject'] ?? '');
+    $template['body_html'] = (string) ($template['body_html'] ?? '');
+    $template['body_text'] = (string) ($template['body_text'] ?? '');
+    $template['from_name'] = sanitize_text_field((string) ($template['from_name'] ?? ''));
+    $template['from_email'] = sanitize_email((string) ($template['from_email'] ?? ''));
+    $template['reply_to'] = sanitize_email((string) ($template['reply_to'] ?? ''));
+    $template['conditions'] = is_array($template['conditions'] ?? null) ? $template['conditions'] : [];
+    $template['recipients'] = is_array($template['recipients'] ?? null) ? $template['recipients'] : ['targets' => ['current_user'], 'extra' => []];
+    $template['recipients']['targets'] = is_array($template['recipients']['targets'] ?? null) ? array_values(array_map('sanitize_key', $template['recipients']['targets'])) : ['current_user'];
+    $template['recipients']['extra'] = is_array($template['recipients']['extra'] ?? null) ? array_values(array_map('sanitize_email', $template['recipients']['extra'])) : [];
+
+    return apply_filters('emonks_resolve_email_template', $template, $templateKey, $context);
+}
+
+/** @param array<string,mixed> $eventContext @return array<string,mixed> */
+function emonks_build_email_token_context(array $eventContext = []): array
+{
+    $userId = absint((string) ($eventContext['user_id'] ?? 0));
+    $workspaceId = absint((string) ($eventContext['workspace_id'] ?? 0));
+    $currentPlan = sanitize_key((string) ($eventContext['current_plan'] ?? ''));
+    $targetPlan = sanitize_key((string) ($eventContext['target_plan'] ?? ''));
+    $cycle = sanitize_key((string) ($eventContext['cycle'] ?? ($userId > 0 ? emonks_get_current_user_billing_cycle($userId) : 'monthly')));
+    $user = $userId > 0 ? get_userdata($userId) : null;
+    $workspace = $workspaceId > 0 ? get_post($workspaceId) : null;
+    $accountId = absint((string) ($eventContext['account_id'] ?? ($workspaceId > 0 ? emonks_get_workspace_meta($workspaceId, 'account_id', 0) : 0)));
+    $account = $accountId > 0 ? get_post($accountId) : null;
+
+    return [
+        'user' => [
+            'id' => $userId,
+            'email' => $user instanceof \WP_User ? (string) $user->user_email : '',
+            'display_name' => $user instanceof \WP_User ? (string) $user->display_name : '',
+            'first_name' => $user instanceof \WP_User ? (string) get_user_meta($userId, 'first_name', true) : '',
+            'last_name' => $user instanceof \WP_User ? (string) get_user_meta($userId, 'last_name', true) : '',
+        ],
+        'workspace' => [
+            'id' => $workspaceId,
+            'title' => $workspace instanceof \WP_Post ? (string) $workspace->post_title : '',
+            'status' => $workspaceId > 0 ? emonks_get_workspace_status($workspaceId) : '',
+            'public_slug' => $workspaceId > 0 ? (string) emonks_get_workspace_meta($workspaceId, 'public_slug', '') : '',
+            'url' => $workspaceId > 0 ? home_url('/' . sanitize_title((string) emonks_get_workspace_meta($workspaceId, 'public_slug', '')) . '/') : '',
+        ],
+        'account' => [
+            'id' => $accountId,
+            'name' => $account instanceof \WP_Post ? (string) $account->post_title : '',
+        ],
+        'billing' => [
+            'current_plan' => $currentPlan !== '' ? $currentPlan : ($userId > 0 ? emonks_get_current_user_plan($userId) : ''),
+            'target_plan' => $targetPlan,
+            'cycle' => $cycle,
+            'is_upgrade' => ! empty($eventContext['is_upgrade']) ? '1' : '0',
+        ],
+        'system' => [
+            'site_name' => (string) get_bloginfo('name'),
+            'site_url' => (string) home_url('/'),
+            'today' => (string) wp_date('Y-m-d'),
+        ],
+    ];
+}
+
+/** @param array<string,mixed> $template @param array<string,mixed> $context @return array<string,mixed> */
+function emonks_render_email_template_strings(array $template, array $context): array
+{
+    foreach (['subject', 'body_html', 'body_text', 'from_name', 'from_email', 'reply_to'] as $fieldKey) {
+        $template[$fieldKey] = emonks_replace_email_tokens((string) ($template[$fieldKey] ?? ''), $context);
+    }
+    return $template;
+}
+
+/** @param array<string,mixed> $context */
+function emonks_replace_email_tokens(string $content, array $context): string
+{
+    return (string) preg_replace_callback('/\{\{\s*([a-z0-9_\\.]+)\s*\}\}/i', static function ($matches) use ($context): string {
+        $path = explode('.', sanitize_text_field((string) ($matches[1] ?? '')));
+        $value = $context;
+        foreach ($path as $segment) {
+            if (! is_array($value) || ! array_key_exists($segment, $value)) {
+                return '';
+            }
+            $value = $value[$segment];
+        }
+        if (is_scalar($value)) {
+            return (string) $value;
+        }
+        return '';
+    }, $content);
+}
+
+/** @return array<string,string> */
+function emonks_email_token_catalog(): array
+{
+    return [
+        'user.id' => 'Gebruiker ID',
+        'user.email' => 'Gebruiker e-mail',
+        'user.display_name' => 'Gebruiker display name',
+        'user.first_name' => 'Gebruiker voornaam',
+        'user.last_name' => 'Gebruiker achternaam',
+        'workspace.id' => 'Workspace ID',
+        'workspace.title' => 'Workspace titel',
+        'workspace.status' => 'Workspace status',
+        'workspace.public_slug' => 'Workspace public slug',
+        'workspace.url' => 'Workspace URL',
+        'account.id' => 'Account ID',
+        'account.name' => 'Account naam',
+        'billing.current_plan' => 'Huidig plan',
+        'billing.target_plan' => 'Doelplan',
+        'billing.cycle' => 'Billing cycle',
+        'billing.is_upgrade' => 'Is upgrade (1/0)',
+        'system.site_name' => 'Site naam',
+        'system.site_url' => 'Site URL',
+        'system.today' => 'Datum (Y-m-d)',
+    ];
 }
 
 /** @return array<string,mixed> */

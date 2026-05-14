@@ -112,6 +112,7 @@ final class Plugin
             'RestApi.php',
             'CustomDomains.php',
             'Shortcodes.php',
+            'UserMenu.php',
         ];
 
         foreach ($files as $file) {
@@ -152,6 +153,7 @@ final class Plugin
             'rest_api' => new RestApi(),
             'custom_domains' => new CustomDomains(),
             'shortcodes' => new Shortcodes(),
+            'user_menu' => new UserMenu(),
         ];
     }
 }

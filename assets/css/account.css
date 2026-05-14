@@ -37,10 +37,6 @@
   background: transparent;
 }
 
-.emonks-account-shell .card {
-  border-radius: 14px;
-}
-
 .emonks-account-shell .form-control:focus,
 .emonks-account-shell .form-select:focus {
   border-color: var(--emonks-color-focus);

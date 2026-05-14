@@ -5,6 +5,7 @@ Belangrijkste settings in `emonks_saas_settings`:
 - `field_library`
 - `form_templates`
 - `service_schemas`
+- `email_templates`
 - `feature_flags`
 - `billing`
 - `branding`

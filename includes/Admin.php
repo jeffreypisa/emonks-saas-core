@@ -16,17 +16,17 @@ final class Admin
     {
         add_menu_page('Emonks SaaS', 'Emonks SaaS', 'manage_options', 'emonks-saas-core', [$this, 'renderDashboardPage'], 'dashicons-chart-area', 58);
         add_submenu_page('emonks-saas-core', 'Dashboard', 'Dashboard', 'manage_options', 'emonks-saas-core', [$this, 'renderDashboardPage']);
-        add_submenu_page('emonks-saas-core', 'Setup', 'Setup', 'manage_options', 'emonks-saas-setup', [$this, 'renderSetupPage']);
         add_submenu_page('emonks-saas-core', 'Services', 'Services', 'manage_options', 'emonks-saas-services', [$this, 'renderServicesPage']);
         add_submenu_page('emonks-saas-core', 'Fields', 'Fields', 'manage_options', 'emonks-saas-fields', [$this, 'renderFieldsPage']);
         add_submenu_page('emonks-saas-core', 'Forms', 'Forms', 'manage_options', 'emonks-saas-forms', [$this, 'renderFormsPage']);
-        add_submenu_page('emonks-saas-core', 'Shortcodes', 'Shortcodes', 'manage_options', 'emonks-saas-shortcodes', [$this, 'renderShortcodesPage']);
+        add_submenu_page('emonks-saas-core', 'Emails', 'Emails', 'manage_options', 'emonks-saas-emails', [$this, 'renderEmailsPage']);
         add_submenu_page('emonks-saas-core', 'Features', 'Features', 'manage_options', 'emonks-saas-features', [$this, 'renderFeaturesPage']);
         add_submenu_page('emonks-saas-core', 'Plans', 'Plans', 'manage_options', 'emonks-saas-plans', [$this, 'renderPlansPage']);
         add_submenu_page('emonks-saas-core', 'Billing', 'Billing', 'manage_options', 'emonks-saas-billing', [$this, 'renderBillingPage']);
         add_submenu_page('emonks-saas-core', 'Workspaces', 'Workspaces', 'manage_options', 'edit.php?post_type=emonks_workspace');
         add_submenu_page('emonks-saas-core', 'SaaS Health', 'SaaS Health', 'manage_options', 'emonks-saas-health', [$this, 'renderSaasHealthPage']);
         add_submenu_page('emonks-saas-core', 'Logs', 'Logs', 'manage_options', 'emonks-saas-logs', [$this, 'renderLogsPage']);
+        add_submenu_page('emonks-saas-core', 'Docs & Support', 'Docs & Support', 'manage_options', 'emonks-saas-docs', [$this, 'renderDocsPage']);
         add_submenu_page('emonks-saas-core', 'Settings', 'Settings', 'manage_options', 'emonks-saas-settings', [$this, 'renderSettingsPage']);
     }
 
@@ -41,18 +41,51 @@ final class Admin
         wp_add_inline_style(
             'emonks-saas-admin',
             '.emonks-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}' .
-            '.emonks-card{background:#fff;border:1px solid #dcdcde;border-radius:12px;padding:16px}' .
+            '.emonks-card{background:#fff;border:1px solid #dcdcde;padding:16px}' .
             '.emonks-kpi{font-size:28px;font-weight:700;margin-top:8px}' .
             '.emonks-muted{color:#646970}' .
+            '.emonks-dashboard-hero{background:#fff;border:1px solid #dcdcde;padding:20px;margin:0 0 18px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;align-items:center}' .
+            '.emonks-dashboard-hero h1{margin:0 0 8px;font-size:26px;line-height:1.2}' .
+            '.emonks-dashboard-hero p{margin:0;max-width:720px;font-size:14px;line-height:1.55}' .
+            '.emonks-dashboard-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}' .
+            '.emonks-dashboard-layout{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(320px,.75fr);gap:18px;align-items:start}' .
+            '.emonks-dashboard-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 18px}' .
+            '.emonks-kpi-card{background:#fff;border:1px solid #dcdcde;padding:14px;min-height:92px;display:flex;flex-direction:column;justify-content:space-between}' .
+            '.emonks-kpi-label{color:#646970;font-size:12px;font-weight:600;text-transform:uppercase}' .
+            '.emonks-kpi-value{font-size:30px;line-height:1;font-weight:700;color:#1d2327}' .
+            '.emonks-dashboard-section{background:#fff;border:1px solid #dcdcde;padding:16px;margin-bottom:18px}' .
+            '.emonks-dashboard-section h2{margin:0 0 12px;font-size:16px}' .
+            '.emonks-setup-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}' .
+            '.emonks-setup-metric{border:1px solid #e0e0e0;background:#f8fafc;padding:12px}' .
+            '.emonks-setup-metric strong{display:block;font-size:22px;line-height:1;margin-bottom:6px}' .
+            '.emonks-plan-row{display:grid;grid-template-columns:96px minmax(0,1fr) 44px;gap:10px;align-items:center;margin:10px 0}' .
+            '.emonks-plan-bar{height:8px;background:#f0f0f1;border-radius:999px;overflow:hidden}' .
+            '.emonks-plan-fill{display:block;height:100%;background:#2271b1;border-radius:999px}' .
+            '.emonks-flow-list{margin:0;display:grid;gap:10px}' .
+            '.emonks-flow-list li{margin:0;padding:12px;border:1px solid #e0e0e0;background:#f8fafc;display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;align-items:start}' .
+            '.emonks-step-index{width:24px;height:24px;border-radius:50%;background:#2271b1;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}' .
+            '.emonks-quicklinks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}' .
+            '.emonks-quicklinks .button{display:flex;justify-content:center;text-align:center}' .
+            '.emonks-support-shell{display:grid;grid-template-columns:260px minmax(0,1fr);gap:18px;align-items:start}' .
+            '.emonks-support-nav{position:sticky;top:46px}' .
+            '.emonks-support-nav a{display:block;padding:9px 10px;border:1px solid #dcdcde;background:#fff;color:#1d2327;text-decoration:none;margin-bottom:8px}' .
+            '.emonks-support-nav a:hover{border-color:#2271b1;color:#1d2327}' .
+            '.emonks-support-nav a.is-active{border-color:#2271b1;background:#eef6ff;box-shadow:0 0 0 1px rgba(34,113,177,.12)}' .
+            '.emonks-support-hero{background:#fff;border:1px solid #dcdcde;padding:20px;margin:0 0 18px}' .
+            '.emonks-support-hero h1{margin:0 0 8px;font-size:26px;line-height:1.2}' .
+            '.emonks-support-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}' .
+            '.emonks-support-checklist{margin:0;display:grid;gap:10px}' .
+            '.emonks-support-checklist li{margin:0;padding:12px;border:1px solid #e0e0e0;background:#f8fafc}' .
+            '.emonks-support-callout{border-left:4px solid #2271b1;background:#f6f7f7;padding:12px 14px;margin:12px 0}' .
             '.emonks-header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin:12px 0 20px}' .
-            '.emonks-tip{background:#f6f7f7;border-left:4px solid #2271b1;padding:12px 14px;border-radius:8px;max-width:540px}' .
+            '.emonks-tip{background:#f6f7f7;border-left:4px solid #2271b1;padding:12px 14px;max-width:540px}' .
             '.emonks-subtle{font-size:12px;color:#646970;line-height:1.45}' .
             '.emonks-form-table td .description{margin-top:6px;display:block}' .
             '.emonks-builder-shell{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:18px;align-items:start}' .
             '.emonks-builder-main{min-width:0}.emonks-builder-inspector{position:sticky;top:46px}' .
             '.emonks-builder-schemas{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}' .
-            '.emonks-builder-preview{background:#fff;border:1px solid #dcdcde;border-radius:12px;padding:14px}' .
-            '.emonks-builder-field{display:flex;justify-content:space-between;gap:10px;align-items:center;border:1px solid #dcdcde;border-left:3px solid transparent;background:#fff;border-radius:10px;padding:10px 12px;margin:0 0 10px;cursor:pointer}' .
+            '.emonks-builder-preview{background:#fff;border:1px solid #dcdcde;padding:14px}' .
+            '.emonks-builder-field{display:flex;justify-content:space-between;gap:10px;align-items:center;border:1px solid #dcdcde;border-left:3px solid transparent;background:#fff;padding:10px 12px;margin:0 0 10px;cursor:pointer}' .
             '.emonks-builder-field:hover{border-color:#bfc3c9}.emonks-builder-field.is-selected{border-color:#2271b1;border-left-color:#2271b1;background:#eef6ff;box-shadow:0 0 0 1px rgba(34,113,177,.18)}' .
             '.emonks-builder-field-meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;color:#646970;font-size:12px}' .
             '.emonks-pill{display:inline-flex;align-items:center;gap:4px;border:1px solid #dcdcde;border-radius:999px;padding:2px 8px;background:#fff;font-size:11px}' .
@@ -70,51 +103,128 @@ final class Admin
             '.emonks-services-shell{display:grid;grid-template-columns:340px minmax(0,1fr);gap:18px;align-items:start}' .
             '.emonks-services-sidebar{position:sticky;top:46px}' .
             '.emonks-services-sidebar .regular-text,.emonks-services-sidebar select,.emonks-services-sidebar input[type="text"],.emonks-services-sidebar input[type="number"]{width:100%;max-width:100%;box-sizing:border-box}' .
-            '.emonks-service-item{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;max-width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid #dcdcde;border-radius:8px;background:#fff;color:#1d2327;text-decoration:none;margin-bottom:8px;overflow:hidden}' .
+            '.emonks-service-item{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;max-width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid #dcdcde;background:#fff;color:#1d2327;text-decoration:none;margin-bottom:8px;overflow:hidden}' .
             '.emonks-service-item > span:first-child{min-width:0}' .
             '.emonks-service-item .emonks-subtle{display:block;word-break:break-word}' .
             '.emonks-service-item:hover{border-color:#2271b1}.emonks-service-item.is-active{border-color:#2271b1;background:#eef6ff}' .
             '.emonks-service-meta{display:flex;gap:6px;align-items:center}.emonks-service-form{display:none}.emonks-service-form.is-open{display:block}' .
             '.emonks-danger-zone{margin-top:24px;padding-top:14px;border-top:1px solid #dcdcde}' .
             '.emonks-tab-panel{display:none}.emonks-tab-panel.is-active{display:block}' .
-            '.emonks-editor-section{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:12px}' .
+            '.emonks-editor-section{background:#f8fafc;border:1px solid #e2e8f0;padding:14px;margin-bottom:12px}' .
             '.emonks-editor-title{margin:0 0 10px;font-size:13px;line-height:1.3;letter-spacing:.02em;text-transform:uppercase;color:#334155}' .
             '.emonks-editor-form p{margin:0}' .
             '.emonks-editor-form label{display:block;font-weight:600;color:#1e293b}' .
             '.emonks-editor-form .regular-text,.emonks-editor-form select,.emonks-editor-form input[type="text"],.emonks-editor-form input[type="number"]{width:100%;max-width:100%;margin-top:6px}' .
             '.emonks-editor-form .checkbox-row{display:flex;align-items:center;gap:8px;padding-top:10px}' .
             '.emonks-editor-form .checkbox-row label{display:flex;align-items:center;gap:8px;font-weight:500;margin:0}' .
-            '@media(max-width:1120px){.emonks-builder-shell{grid-template-columns:1fr}.emonks-builder-inspector{position:static}.emonks-field-type-grid{grid-template-columns:1fr}.emonks-services-shell{grid-template-columns:1fr}.emonks-services-sidebar{position:static}}'
+            '@media(max-width:1120px){.emonks-builder-shell{grid-template-columns:1fr}.emonks-builder-inspector{position:static}.emonks-field-type-grid{grid-template-columns:1fr}.emonks-services-shell{grid-template-columns:1fr}.emonks-services-sidebar{position:static}.emonks-dashboard-layout{grid-template-columns:1fr}.emonks-dashboard-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.emonks-dashboard-hero{grid-template-columns:1fr}.emonks-dashboard-actions{justify-content:flex-start}.emonks-support-shell{grid-template-columns:1fr}.emonks-support-nav{position:static}}' .
+            '@media(max-width:640px){.emonks-dashboard-kpis{grid-template-columns:1fr}.emonks-quicklinks{grid-template-columns:1fr}.emonks-setup-metrics{grid-template-columns:1fr}.emonks-plan-row{grid-template-columns:78px minmax(0,1fr) 36px}}'
         );
     }
 
     public function renderDashboardPage(): void
     {
         $stats = $this->collectStats();
+        $services = emonks_get_service_schemas()['services'] ?? [];
+        $fields = emonks_get_field_library()['fields'] ?? [];
+        $forms = emonks_get_form_templates()['forms'] ?? [];
+        $plans = Plans::getPlans();
 
         echo '<div class="wrap">';
-        $this->renderPageHeader('Emonks SaaS Dashboard', 'Overzicht van adoptie, workspaces en subscriptions.', 'Gebruik dit dashboard om bottlenecks in onboarding, billing activatie en publicatie direct te signaleren.');
-
-        echo '<div class="emonks-grid">';
-        $this->renderKpiCard('Accounts', (string) $stats['accounts']);
-        $this->renderKpiCard('Workspaces', (string) $stats['workspaces']);
-        $this->renderKpiCard('Actieve subscriptions', (string) $stats['active_subscriptions']);
-        $this->renderKpiCard('Published workspaces', (string) $stats['published_workspaces']);
+        echo '<div class="emonks-dashboard-hero">';
+        echo '<div><h1>Emonks SaaS Dashboard</h1><p class="emonks-muted">Een strak overzicht van adoptie, setup, subscriptions en publicatie. Begin hier voor dagelijkse checks, nieuwe inrichting en snelle troubleshooting.</p></div>';
+        echo '<div class="emonks-dashboard-actions">';
+        echo '<a class="button button-primary" href="' . esc_url(admin_url('admin.php?page=emonks-saas-services')) . '">Service beheren</a>';
+        echo '<a class="button" href="' . esc_url(admin_url('admin.php?page=emonks-saas-health')) . '">Health check</a>';
+        echo '<a class="button" href="' . esc_url(admin_url('admin.php?page=emonks-saas-docs')) . '">Docs</a>';
+        echo '</div>';
         echo '</div>';
 
-        echo '<h2 style="margin-top:24px;">Plan verdeling</h2><table class="widefat striped"><thead><tr><th>Plan</th><th>Aantal</th></tr></thead><tbody>';
-        foreach ($stats['plan_distribution'] as $plan => $count) {
-            echo '<tr><td>' . esc_html((string) $plan) . '</td><td>' . esc_html((string) $count) . '</td></tr>';
-        }
-        echo '</tbody></table>';
+        echo '<div class="emonks-dashboard-kpis">';
+        $this->renderDashboardKpi('Accounts', (string) $stats['accounts']);
+        $this->renderDashboardKpi('Workspaces', (string) $stats['workspaces']);
+        $this->renderDashboardKpi('Actieve subscriptions', (string) $stats['active_subscriptions']);
+        $this->renderDashboardKpi('Published workspaces', (string) $stats['published_workspaces']);
+        echo '</div>';
 
-        echo '<h2 style="margin-top:24px;">Aanbevolen beheerflow</h2>';
-        echo '<ol><li>Controleer eerst Billing configuratie en test mode.</li><li>Valideer daarna planlimieten en features per service.</li><li>Rond af met onboarding- en publish-checks.</li></ol>';
+        echo '<div class="emonks-dashboard-layout">';
+        echo '<div>';
+        echo '<div class="emonks-dashboard-section"><h2>Plan verdeling</h2>';
+        $this->renderPlanDistribution($stats['plan_distribution']);
+        echo '</div>';
+
+        echo '<div class="emonks-dashboard-section"><h2>Aanbevolen beheerflow</h2>';
+        echo '<ol class="emonks-flow-list">';
+        echo '<li><span class="emonks-step-index">1</span><span><strong>Controleer Billing</strong><br><span class="emonks-muted">Check test mode, Stripe constants, success/cancel URLs en webhook readiness voordat je live gebruikers doorstuurt.</span></span></li>';
+        echo '<li><span class="emonks-step-index">2</span><span><strong>Valideer planlimieten</strong><br><span class="emonks-muted">Controleer features, services, max workspaces en prijsinformatie per plan.</span></span></li>';
+        echo '<li><span class="emonks-step-index">3</span><span><strong>Test onboarding en publicatie</strong><br><span class="emonks-muted">Maak een testgebruiker, start een workspace en controleer de account- en public routes.</span></span></li>';
+        echo '</ol></div>';
+        echo '</div>';
+
+        echo '<div>';
+        echo '<div class="emonks-dashboard-section"><h2>Setup status</h2>';
+        echo '<div class="emonks-setup-metrics">';
+        $this->renderSetupMetric('Services', (string) count((array) $services));
+        $this->renderSetupMetric('Velden', (string) count((array) $fields));
+        $this->renderSetupMetric('Formulieren', (string) count((array) $forms));
+        $this->renderSetupMetric('Plannen', (string) count((array) $plans));
+        echo '</div></div>';
+
+        echo '<div class="emonks-dashboard-section"><h2>Snelle acties</h2><div class="emonks-quicklinks">';
+        echo '<a class="button" href="' . esc_url(admin_url('admin.php?page=emonks-saas-services')) . '">Services</a>';
+        echo '<a class="button" href="' . esc_url(admin_url('admin.php?page=emonks-saas-fields')) . '">Fields</a>';
+        echo '<a class="button" href="' . esc_url(admin_url('admin.php?page=emonks-saas-forms')) . '">Forms</a>';
+        echo '<a class="button" href="' . esc_url(admin_url('admin.php?page=emonks-saas-plans')) . '">Plans</a>';
+        echo '<a class="button" href="' . esc_url(admin_url('admin.php?page=emonks-saas-billing')) . '">Billing</a>';
+        echo '<a class="button" href="' . esc_url(admin_url('admin.php?page=emonks-saas-logs')) . '">Logs</a>';
+        echo '</div></div>';
+
+        echo '<div class="emonks-dashboard-section"><h2>Volgende stap</h2>';
+        echo '<p class="emonks-muted">Werk van service naar formulier naar plan. Gebruik daarna SaaS Health om ontbrekende koppelingen te vinden.</p>';
+        echo '<p><a class="button button-primary" href="' . esc_url(admin_url('admin.php?page=emonks-saas-services')) . '">Nieuwe service starten</a></p>';
+        echo '</div>';
+        echo '</div>';
+        echo '</div>';
         echo '</div>';
     }
 
     public function renderSettingsPage(): void
     {
+        $tab = sanitize_key((string) ($_GET['settings_tab'] ?? 'general'));
+        if ($tab === 'docs') {
+            wp_safe_redirect(admin_url('admin.php?page=emonks-saas-docs'));
+            exit;
+        }
+
+        if (! in_array($tab, ['general', 'shortcodes', 'user_menu'], true)) {
+            $tab = 'general';
+        }
+
+        echo '<div class="wrap">';
+        $this->renderPageHeader('Emonks SaaS - Settings', 'Algemene instellingen en compacte beheerpagina\'s.', 'Grotere operationele schermen blijven apart; compacte pagina\'s staan hier als tab.');
+        echo '<h2 class="nav-tab-wrapper" style="margin-bottom:14px;">';
+        foreach ([
+            'general' => 'Algemeen',
+            'shortcodes' => 'Shortcodes',
+            'user_menu' => 'Profielmenu',
+        ] as $key => $label) {
+            $url = admin_url('admin.php?page=emonks-saas-settings&settings_tab=' . rawurlencode($key));
+            echo '<a class="nav-tab ' . ($tab === $key ? 'nav-tab-active' : '') . '" href="' . esc_url($url) . '">' . esc_html($label) . '</a>';
+        }
+        echo '</h2>';
+
+        if ($tab === 'shortcodes') {
+            $this->renderShortcodesPanel();
+            echo '</div>';
+            return;
+        }
+
+        if ($tab === 'user_menu') {
+            $this->renderUserMenuPanel();
+            echo '</div>';
+            return;
+        }
+
         $settings = get_option(Settings::OPTION_KEY, []);
         $templateBackgroundClass = sanitize_html_class((string) ($settings['templates']['background_class'] ?? 'bg-light'));
         $templateBackgroundOptions = [
@@ -129,8 +239,6 @@ final class Admin
         if (! array_key_exists($templateBackgroundClass, $templateBackgroundOptions)) {
             $templateBackgroundClass = 'bg-light';
         }
-        echo '<div class="wrap">';
-        $this->renderPageHeader('Emonks SaaS - Settings', 'Algemene instellingen voor branding, debug en technische defaults.', 'Services en formulieren beheer je niet hier, maar in Services, Fields en Forms.');
 
         $this->renderSettingsFormStart('settings');
         echo '<table class="form-table emonks-form-table">';
@@ -150,6 +258,83 @@ final class Admin
     public function renderGeneralPage(): void
     {
         $this->renderSettingsPage();
+    }
+
+    public function renderUserMenuPage(): void
+    {
+        wp_safe_redirect(admin_url('admin.php?page=emonks-saas-settings&settings_tab=user_menu'));
+        exit;
+    }
+
+    private function renderUserMenuPanel(): void
+    {
+        $service = Plugin::instance()->get('user_menu');
+        if (! $service instanceof UserMenu) {
+            echo '<p>User menu service niet beschikbaar.</p>';
+            return;
+        }
+
+        $settings = $service->getSettings();
+        $this->renderSettingsFormStart('user_menu');
+        echo '<table class="form-table emonks-form-table">';
+        echo '<tr><th scope="row">Inschakelen</th><td><label><input type="checkbox" name="settings[user_menu][enabled]" value="1" ' . checked(! empty($settings['enabled']), true, false) . ' /> Activeer profielmenu</label></td></tr>';
+        echo '<tr><th scope="row">Profielfoto</th><td><label><input type="checkbox" name="settings[user_menu][show_avatar]" value="1" ' . checked(! empty($settings['show_avatar']), true, false) . ' /> Toon avatar/profielfoto</label></td></tr>';
+        echo '<tr><th scope="row">Naamweergave</th><td><select name="settings[user_menu][name_mode]">';
+        echo '<option value="full" ' . selected((string) ($settings['name_mode'] ?? 'full'), 'full', false) . '>Volledige naam</option>';
+        echo '<option value="first" ' . selected((string) ($settings['name_mode'] ?? 'full'), 'first', false) . '>Alleen voornaam</option>';
+        echo '<option value="display" ' . selected((string) ($settings['name_mode'] ?? 'full'), 'display', false) . '>Display name fallback</option>';
+        echo '</select></td></tr>';
+        echo '<tr><th scope="row">Type link</th><td><select name="settings[user_menu][link_type]">';
+        echo '<option value="link" ' . selected((string) ($settings['link_type'] ?? 'link'), 'link', false) . '>Normale link</option>';
+        echo '<option value="button" ' . selected((string) ($settings['link_type'] ?? 'link'), 'button', false) . '>Knop (btn-sm)</option>';
+        echo '</select></td></tr>';
+        echo '<tr><th scope="row">Knop stijl</th><td><select name="settings[user_menu][button_style]">';
+        foreach ([
+            'btn-light' => 'btn-light',
+            'btn-outline-contrast' => 'btn-outline-contrast',
+            'btn-dark' => 'btn-dark',
+            'btn-primary' => 'btn-primary',
+            'btn-gradient-light' => 'btn-gradient-light',
+            'btn-gradient-dark' => 'btn-gradient-dark',
+        ] as $styleValue => $styleLabel) {
+            echo '<option value="' . esc_attr($styleValue) . '" ' . selected((string) ($settings['button_style'] ?? 'btn-primary'), $styleValue, false) . '>' . esc_html($styleLabel) . '</option>';
+        }
+        echo '</select><span class="description">In Skeletor menu-rendering zonder theme-aanpassing worden stijlen gemapt naar link, btn-primary of btn-secondary.</span></td></tr>';
+        echo '<tr><th scope="row">Dropdown links</th><td>';
+        foreach ([
+            'account' => 'Account',
+            'workspaces' => 'Workspaces',
+            'settings' => 'Profiel',
+            'billing' => 'Billing',
+            'logout' => 'Uitloggen',
+        ] as $key => $label) {
+            echo '<label style="display:block;margin:4px 0;"><input type="checkbox" name="settings[user_menu][links][' . esc_attr($key) . ']" value="1" ' . checked(! empty($settings['links'][$key]), true, false) . ' /> ' . esc_html($label) . '</label>';
+        }
+        echo '</td></tr>';
+        echo '</table>';
+        submit_button('Profielmenu opslaan');
+        $this->renderSettingsFormEnd();
+
+        $menus = wp_get_nav_menus();
+        $selectedMenuId = absint((string) ($_GET['menu_id'] ?? 0));
+        echo '<hr style="margin:24px 0;" />';
+        echo '<h2>Direct toevoegen aan bestaand menu</h2>';
+        echo '<p class="description">Fallback als Weergave > Menu\'s geen item toevoegt. Dit voegt het profielmenu server-side toe.</p>';
+        echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
+        wp_nonce_field('emonks_user_menu_add_to_menu', 'emonks_user_menu_add_nonce');
+        echo '<input type="hidden" name="action" value="emonks_user_menu_add_to_menu" />';
+        echo '<p><label for="emonks_user_menu_target">Menu</label><br>';
+        echo '<select id="emonks_user_menu_target" name="menu_id">';
+        echo '<option value="">Selecteer menu...</option>';
+        foreach ($menus as $menu) {
+            if (! $menu instanceof \WP_Term) {
+                continue;
+            }
+            echo '<option value="' . esc_attr((string) $menu->term_id) . '" ' . selected($selectedMenuId, (int) $menu->term_id, false) . '>' . esc_html((string) $menu->name) . '</option>';
+        }
+        echo '</select></p>';
+        submit_button('Voeg profielmenu toe');
+        echo '</form>';
     }
 
     public function renderBillingPage(): void
@@ -247,10 +432,13 @@ final class Admin
 
     public function renderShortcodesPage(): void
     {
-        $catalog = class_exists(Shortcodes::class) ? Shortcodes::catalog() : [];
+        wp_safe_redirect(admin_url('admin.php?page=emonks-saas-settings&settings_tab=shortcodes'));
+        exit;
+    }
 
-        echo '<div class="wrap">';
-        $this->renderPageHeader('Emonks SaaS - Shortcodes', 'Gebruik plugin-formulieren en accountblokken direct in pagina’s of Twig content.', 'Beheer formulieren in Forms en velden in Fields. Shortcodes lezen die configuratie automatisch uit.');
+    private function renderShortcodesPanel(): void
+    {
+        $catalog = class_exists(Shortcodes::class) ? Shortcodes::catalog() : [];
 
         echo '<div class="emonks-card">';
         echo '<h2 style="margin-top:0;">Beschikbare shortcodes</h2>';
@@ -276,20 +464,177 @@ final class Admin
         echo '<div class="emonks-card"><h3 style="margin-top:0;">Waar beheer ik dit?</h3><ul><li><strong>Fields:</strong> velddefinities en type/source.</li><li><strong>Forms:</strong> welke velden in welk formulier.</li><li><strong>Services:</strong> welke forms in welke context actief zijn.</li></ul></div>';
         echo '<div class="emonks-card"><h3 style="margin-top:0;">Gebruik in theme</h3><p>Plaats shortcode in pagina-content of render via WordPress:</p><p><code>&lt;?php echo do_shortcode(\'[emonks_form key="workspace_create"]\'); ?&gt;</code></p><p class="emonks-muted">Tip: houd presentatie in je Twig/theme en gebruik shortcodes voor snelle validatie/MVP-flow.</p></div>';
         echo '</div>';
+    }
 
+    public function renderDocsPage(): void
+    {
+        $sections = $this->docsSections();
+        $active = sanitize_key((string) ($_GET['docs_section'] ?? 'overview'));
+        if (! isset($sections[$active])) {
+            $active = 'overview';
+        }
+
+        echo '<div class="wrap">';
+        echo '<div class="emonks-support-hero">';
+        echo '<h1>Emonks SaaS Docs & Support</h1>';
+        echo '<p class="emonks-muted">Handleiding, support-checklists en technische referentie voor beheer, Skeletor-integratie en troubleshooting. Gebruik dit als startpunt voordat je instellingen wijzigt of bugs onderzoekt.</p>';
+        echo '<div class="emonks-support-actions">';
+        echo '<a class="button button-primary" href="' . esc_url(admin_url('admin.php?page=emonks-saas-health')) . '">Open SaaS Health</a>';
+        echo '<a class="button" href="' . esc_url(admin_url('admin.php?page=emonks-saas-logs')) . '">Bekijk Logs</a>';
+        echo '<a class="button" href="' . esc_url(admin_url('admin.php?page=emonks-saas-settings&settings_tab=shortcodes')) . '">Shortcodes tab</a>';
+        echo '</div></div>';
+
+        echo '<div class="emonks-support-shell">';
+        $this->renderDocsNavigation($sections, $active);
+        echo '<div class="emonks-card">';
+        echo '<h2 style="margin-top:0;">' . esc_html($sections[$active]) . '</h2>';
+        $this->renderDocsSection($active);
+        echo '</div></div></div>';
+    }
+
+    /** @return array<string,string> */
+    private function docsSections(): array
+    {
+        return [
+            'overview' => 'Support overzicht',
+            'setup' => 'Startgids & setup',
+            'beheer' => 'Beheerhandleiding',
+            'skeletor' => 'Skeletor theme gebruik',
+            'shortcodes' => 'Shortcodes',
+            'developer' => 'Developer referentie',
+            'troubleshooting' => 'Troubleshooting',
+            'ideas' => 'Gebruiksideeen',
+            'files' => 'Markdown docs',
+        ];
+    }
+
+    /** @param array<string,string> $sections */
+    private function renderDocsNavigation(array $sections, string $active): void
+    {
+        echo '<div class="emonks-support-nav">';
+        foreach ($sections as $key => $label) {
+            $url = admin_url('admin.php?page=emonks-saas-docs&docs_section=' . rawurlencode((string) $key));
+            echo '<a class="' . ($active === $key ? 'is-active' : '') . '" href="' . esc_url($url) . '">' . esc_html($label) . '</a>';
+        }
         echo '</div>';
     }
 
+    private function renderDocsSection(string $section): void
+    {
+        if ($section === 'overview') {
+            echo '<div class="emonks-support-callout"><strong>Support workflow</strong><br>Begin bij SaaS Health, controleer daarna Logs, reproduceer de flow met een testgebruiker en pas dan pas instellingen of templates aan.</div>';
+            echo '<div class="emonks-grid">';
+            echo '<div><h3>Voor beheerders</h3><ul><li>Dashboard voor adoptie en setup-status.</li><li>SaaS Health voor ontbrekende routes, settings en koppelingen.</li><li>Billing voor test mode, checkout en provider-readiness.</li><li>Logs voor recente plugin-events.</li></ul></div>';
+            echo '<div><h3>Voor developers</h3><ul><li>Theme overrides blijven in Skeletor.</li><li>Plugin bewaakt routes, permissions, billing en opslag.</li><li>Gebruik helpers, filters en shortcodes voor snelle integratie.</li><li>Raadpleeg Markdown docs voor verdieping.</li></ul></div>';
+            echo '</div>';
+            return;
+        }
+
+        if ($section === 'setup') {
+            echo '<ol class="emonks-support-checklist"><li><strong>Installatie</strong><br>Plaats de plugin in <code>/wp-content/plugins/emonks-saas-core/</code>, activeer hem en draai <code>composer install</code> in de pluginmap voor Timber 2.</li><li><strong>Permalinks</strong><br>Sla WordPress permalinks opnieuw op zodat account-, auth- en public routes geregistreerd zijn.</li><li><strong>Eerste inrichting</strong><br>Maak eerst een service, daarna velden, formulieren, features en plannen.</li><li><strong>Controle</strong><br>Open SaaS Health en los waarschuwingen op voordat je met echte gebruikers test.</li></ol>';
+            return;
+        }
+
+        if ($section === 'beheer') {
+            echo '<table class="widefat striped"><thead><tr><th>Onderdeel</th><th>Gebruik</th><th>Supportvraag</th></tr></thead><tbody>';
+            foreach ([
+                ['Dashboard', 'Adoptie, setup, subscriptions en planverdeling.', 'Klopt de basisstatus van de SaaS?'],
+                ['Services', 'Product- of dienstdefinities met form usages en render hints.', 'Is de juiste service actief en gekoppeld?'],
+                ['Fields', 'Centrale veldbibliotheek.', 'Bestaat het veld en heeft het de juiste source?'],
+                ['Forms', 'Formuliersamenstellingen per context.', 'Gebruikt de flow het juiste formulier?'],
+                ['Features', 'Feature flags en feature-termen.', 'Blokkeert een feature gate de gebruiker?'],
+                ['Plans', 'Limieten, prijzen, services en Stripe IDs.', 'Heeft het plan toegang tot deze service?'],
+                ['Billing', 'Test mode, checkout, portal en provider instellingen.', 'Gaat de gebruiker door checkout of simulatie?'],
+                ['Workspaces', 'Workspace posts en metadata.', 'Bestaat de workspace en is ownership correct?'],
+                ['SaaS Health', 'Automatische statuschecks.', 'Welke dependency of koppeling ontbreekt?'],
+                ['Logs', 'Recente plugin-events.', 'Welke actie ging net mis?'],
+            ] as $row) {
+                echo '<tr><td><strong>' . esc_html($row[0]) . '</strong></td><td>' . esc_html($row[1]) . '</td><td>' . esc_html($row[2]) . '</td></tr>';
+            }
+            echo '</tbody></table>';
+            return;
+        }
+
+        if ($section === 'skeletor') {
+            echo '<div class="emonks-grid">';
+            echo '<div><h3>Template overrides</h3><p>De loader zoekt eerst in het actieve theme en daarna in de plugin fallback. Plaats overrides in <code>/templates/...</code>, bijvoorbeeld <code>/templates/account/dashboard.twig</code> of <code>/templates/account/login.twig</code>.</p></div>';
+            echo '<div><h3>Twig context</h3><p>Templates krijgen service schema\'s, field library, form templates, resolved forms, workspace data en ACF-data. Houd layout en Bootstrap markup in Skeletor; houd rechten, opslag en routing in de plugin.</p></div>';
+            echo '<div><h3>Filters</h3><p>Gebruik <code>emonks_saas_labels</code> voor labels en <code>emonks_saas_routes</code> voor URL-segmenten.</p></div>';
+            echo '<div><h3>Styling</h3><p>Fallback templates gebruiken classes zoals <code>btn</code>, <code>form-control</code>, <code>alert</code>, <code>badge</code> en <code>list-group</code>.</p></div>';
+            echo '</div>';
+            return;
+        }
+
+        if ($section === 'shortcodes') {
+            echo '<table class="widefat striped"><thead><tr><th>Voorbeeld</th><th>Doel</th><th>Typisch gebruik</th></tr></thead><tbody>';
+            foreach ([
+                ['[emonks_form key="auth_login"]', 'Rendert loginformulier uit Forms.', 'Loginpagina of modal-content.'],
+                ['[emonks_form key="workspace_create"]', 'Rendert workspace-create formulier.', 'Nieuwe workspace of intake.'],
+                ['[emonks_workspace_list]', 'Toont workspaces van de ingelogde gebruiker.', 'Accountdashboard of klantportaal.'],
+                ['[emonks_account_link suffix="billing" label="Ga naar billing"]', 'Maakt link naar account-subroute.', 'CTA naar billing, settings of workspaces.'],
+                ['[emonks_user_menu]', 'Toont profielmenu.', 'Header, accountnavigatie of menu fallback.'],
+            ] as $row) {
+                echo '<tr><td><code>' . esc_html($row[0]) . '</code></td><td>' . esc_html($row[1]) . '</td><td>' . esc_html($row[2]) . '</td></tr>';
+            }
+            echo '</tbody></table>';
+            echo '<p class="emonks-muted">Tip: gebruik shortcodes voor MVP-validatie en verplaats presentatie later naar Twig templates.</p>';
+            return;
+        }
+
+        if ($section === 'developer') {
+            echo '<div class="emonks-grid">';
+            echo '<div><h3>Routes & REST</h3><p>Frontend routes: <code>/account</code>, <code>/account/workspaces</code>, <code>/account/billing</code>, <code>/login</code>, <code>/register</code> en <code>/g/{public_slug}</code>. REST namespace: <code>/wp-json/emonks/v1/</code>.</p></div>';
+            echo '<div><h3>Helpers</h3><p><code>emonks_get_plans()</code>, <code>emonks_get_plan()</code>, <code>emonks_get_current_user_plan()</code>, <code>emonks_get_plan_limit()</code>, <code>emonks_plan_has_feature()</code>, <code>emonks_feature_enabled()</code>, <code>emonks_get_account_url()</code>.</p></div>';
+            echo '<div><h3>Billing provider</h3><p>Billing loopt via een provider-interface. Stripe is standaard, maar een andere provider kan dezelfde checkout-, portal- en plan-change verantwoordelijkheden overnemen.</p></div>';
+            echo '<div><h3>Security</h3><p>Nonce checks, sanitization, ownership checks, capabilities, safe redirects, webhook signature verificatie en idempotency zijn onderdeel van de pluginlaag.</p></div>';
+            echo '</div>';
+            return;
+        }
+
+        if ($section === 'troubleshooting') {
+            echo '<ol class="emonks-support-checklist"><li><strong>Route werkt niet</strong><br>Sla permalinks opnieuw op en controleer <code>Emonks SaaS > SaaS Health</code>.</li><li><strong>Formulier toont niet</strong><br>Controleer of de form key bestaat in Forms en of velden in Fields nog geldig zijn.</li><li><strong>Gebruiker ziet geen workspace</strong><br>Controleer loginstatus, account membership, ownership en workspace status.</li><li><strong>Billing werkt niet</strong><br>Controleer test mode, Stripe constants, price IDs, webhook secret en Logs.</li><li><strong>Theme ziet er vreemd uit</strong><br>Controleer template override pad, Bootstrap classes en of Skeletor styles de fallback markup ondersteunen.</li></ol>';
+            return;
+        }
+
+        if ($section === 'ideas') {
+            echo '<ul><li>Gated dashboards per plan of feature.</li><li>Klantportalen met workspace-status, documenten en service-specifieke acties.</li><li>Intake-flows waarbij een formulier direct een workspace aanmaakt.</li><li>Publieke workspace pagina\'s voor portfolio, lead capture of deelbare klantresultaten.</li><li>Service-specifieke Twig templates voor verschillende verticals binnen dezelfde SaaS-core.</li><li>Onboarding-checklists langs profiel, billing en eerste workspace.</li><li>Profielmenu in de Skeletor header via menu-item of shortcode.</li><li>MVP-validatie met shortcodes voordat een volledige custom UI wordt gebouwd.</li></ul>';
+            return;
+        }
+
+        echo '<table class="widefat striped"><thead><tr><th>Bestand</th><th>Onderwerp</th></tr></thead><tbody>';
+        foreach ([
+            ['docs/architecture.md', 'Architectuur en lagen.'],
+            ['docs/services.md', 'Dynamic services, form usages en publicatie.'],
+            ['docs/fields.md', 'Veldbibliotheek en sources.'],
+            ['docs/forms.md', 'Form templates en rendercontext.'],
+            ['docs/billing.md', 'Billingflows, provider model, test mode en webhooks.'],
+            ['docs/routes.md', 'Account, auth en public routes.'],
+            ['docs/rest-api.md', 'REST API endpoints.'],
+            ['docs/theme-overrides.md', 'Labels, routes en template overrides in het theme.'],
+            ['docs/template-overrides.md', 'Template resolution en Twig context.'],
+            ['docs/user-menu.md', 'Profielmenu instellingen, menu-integratie en shortcode.'],
+            ['docs/security.md', 'Security basisregels.'],
+            ['docs/security-avg-checklist.md', 'Security en AVG checklist.'],
+            ['docs/qa-smoke.md', 'Smoke tests voor installatie en beheerflows.'],
+        ] as $row) {
+            echo '<tr><td><code>' . esc_html($row[0]) . '</code></td><td>' . esc_html($row[1]) . '</td></tr>';
+        }
+        echo '</tbody></table>';
+    }
+
     public function renderSetupPage(): void
+    {
+        wp_safe_redirect(admin_url('admin.php?page=emonks-saas-core'));
+        exit;
+    }
+
+    private function renderSetupPanel(): void
     {
         $services = emonks_get_service_schemas()['services'] ?? [];
         $fields = emonks_get_field_library()['fields'] ?? [];
         $forms = emonks_get_form_templates()['forms'] ?? [];
         $defaultContextForms = $this->defaultServiceContextForms($forms);
         $plans = Plans::getPlans();
-
-        echo '<div class="wrap">';
-        $this->renderPageHeader('Emonks SaaS - Setup', 'Richt je SaaS fundament stap voor stap in.', 'Begin met een service, koppel velden via formulieren en maak daarna plannen/features commercieel.');
         echo '<div class="emonks-grid">';
         $this->renderKpiCard('Services', (string) count((array) $services));
         $this->renderKpiCard('Velden', (string) count((array) $fields));
@@ -299,7 +644,7 @@ final class Admin
         echo '<div class="emonks-card" style="margin-top:18px;"><h2 style="margin-top:0;">Aanbevolen volgorde</h2>';
         echo '<ol><li>Maak je eerste service aan.</li><li>Controleer of de standaard core velden genoeg zijn of voeg velden toe.</li><li>Stel formulieren samen en koppel ze aan service-contexten.</li><li>Maak features en plannen aan zodra de service logisch werkt.</li><li>Controleer SaaS Health voor ontbrekende koppelingen.</li></ol>';
         echo '<p><a class="button button-primary" href="' . esc_url(admin_url('admin.php?page=emonks-saas-services')) . '">Nieuwe service starten</a></p></div>';
-        echo '</div>';
+        echo '<p class="emonks-subtle">Default context forms: ' . esc_html(implode(', ', array_keys($defaultContextForms))) . '.</p>';
     }
 
     public function renderFieldsPage(): void
@@ -672,6 +1017,145 @@ HTML;
         $this->renderSettingsFormEnd();
     }
 
+    public function renderEmailsPage(): void
+    {
+        $templates = emonks_get_email_templates()['templates'] ?? [];
+        $activeKey = sanitize_key((string) ($_GET['email'] ?? ''));
+        if ($activeKey === '' && ! empty($templates)) {
+            $activeKey = (string) array_key_first($templates);
+        }
+        $activeTemplate = is_array($templates[$activeKey] ?? null) ? $templates[$activeKey] : [];
+
+        echo '<div class="wrap">';
+        $this->renderPageHeader('Emonks SaaS - Emails', 'Dynamische mailflows per actie met slimme velden.', 'Koppel e-mails aan events en gebruik tokens zoals {{ user.email }} in onderwerp en inhoud.');
+        echo '<div class="emonks-services-shell">';
+
+        echo '<div class="emonks-card emonks-services-sidebar">';
+        echo '<h2 style="margin-top:0;">Templates</h2>';
+        echo '<p><button type="button" class="button button-primary" data-toggle-email-create>Nieuwe template</button></p>';
+        echo '<div class="emonks-service-form" data-email-create-form>';
+        $this->renderEmailCreateForm();
+        echo '</div>';
+        echo '<div class="emonks-builder-list">';
+        foreach ($templates as $templateKey => $template) {
+            if (! is_array($template)) {
+                continue;
+            }
+            $safeKey = sanitize_key((string) $templateKey);
+            $label = sanitize_text_field((string) ($template['label'] ?? $safeKey));
+            $enabled = ! empty($template['enabled']);
+            $url = admin_url('admin.php?page=emonks-saas-emails&email=' . rawurlencode($safeKey));
+            echo '<a class="emonks-service-item ' . ($safeKey === $activeKey ? 'is-active' : '') . '" href="' . esc_url($url) . '"><span><strong>' . esc_html($label) . '</strong><br><span class="emonks-subtle"><code>' . esc_html($safeKey) . '</code> - ' . esc_html((string) ($template['trigger'] ?? '')) . '</span></span><span class="emonks-pill">' . esc_html($enabled ? 'on' : 'off') . '</span></a>';
+        }
+        echo '</div>';
+        echo '</div>';
+
+        echo '<div class="emonks-card">';
+        if ($activeKey === '' || empty($activeTemplate)) {
+            echo '<p>Selecteer links een template of maak een nieuwe aan.</p>';
+            echo '</div></div></div>';
+            echo '<script>document.addEventListener("DOMContentLoaded",function(){document.querySelectorAll("[data-toggle-email-create]").forEach(function(btn){btn.addEventListener("click",function(){document.querySelectorAll("[data-email-create-form]").forEach(function(p){p.classList.toggle("is-open")})})});});</script>';
+            return;
+        }
+
+        $targets = is_array($activeTemplate['recipients']['targets'] ?? null) ? $activeTemplate['recipients']['targets'] : ['current_user'];
+        $extras = is_array($activeTemplate['recipients']['extra'] ?? null) ? $activeTemplate['recipients']['extra'] : [];
+        $tokenContext = emonks_build_email_token_context([]);
+        $preview = emonks_render_email_template_strings($activeTemplate, $tokenContext);
+
+        echo '<h2 style="margin-top:0;">' . esc_html((string) ($activeTemplate['label'] ?? $activeKey)) . ' <code>' . esc_html($activeKey) . '</code></h2>';
+        $this->renderSettingsFormStart('emails_builder');
+        echo '<input type="hidden" name="emails_builder[action]" value="update" />';
+        echo '<input type="hidden" name="emails_builder[email_key]" value="' . esc_attr($activeKey) . '" />';
+        echo '<h2 class="nav-tab-wrapper" style="margin-bottom:14px;">';
+        echo '<button type="button" class="nav-tab nav-tab-active" data-email-tab="visual">Visual</button>';
+        echo '<button type="button" class="nav-tab" data-email-tab="text">Text</button>';
+        echo '</h2>';
+
+        echo '<div class="emonks-editor-section"><h3 class="emonks-editor-title">Basis</h3><div class="emonks-settings-grid">';
+        echo '<p><label>Label<input type="text" name="emails_builder[email][label]" class="regular-text" value="' . esc_attr((string) ($activeTemplate['label'] ?? $activeKey)) . '" /></label></p>';
+        echo '<p><label>Trigger<select name="emails_builder[email][trigger]">';
+        foreach ($this->emailTriggerOptions() as $trigger => $label) {
+            echo '<option value="' . esc_attr($trigger) . '" ' . selected((string) ($activeTemplate['trigger'] ?? ''), $trigger, false) . '>' . esc_html($label) . '</option>';
+        }
+        echo '</select></label></p>';
+        echo '<p class="checkbox-row"><label><input type="checkbox" name="emails_builder[email][enabled]" value="1" ' . checked(! empty($activeTemplate['enabled']), true, false) . ' /> Ingeschakeld</label></p>';
+        echo '</div></div>';
+
+        echo '<div class="emonks-editor-section"><h3 class="emonks-editor-title">Ontvangers</h3><div class="emonks-settings-grid">';
+        foreach (['current_user' => 'Current user', 'account_owner' => 'Account owner', 'site_admin' => 'Site admin'] as $target => $label) {
+            echo '<p class="checkbox-row"><label><input type="checkbox" name="emails_builder[email][recipients][targets][]" value="' . esc_attr($target) . '" ' . checked(in_array($target, $targets, true), true, false) . ' /> ' . esc_html($label) . '</label></p>';
+        }
+        echo '<p class="full"><label>Extra e-mails (komma gescheiden)<input type="text" name="emails_builder[email][recipients][extra_csv]" class="regular-text" value="' . esc_attr(implode(', ', array_map('strval', $extras))) . '" /></label></p>';
+        echo '</div></div>';
+
+        echo '<div class="emonks-editor-section"><h3 class="emonks-editor-title">Onderwerp</h3>';
+        echo '<p><input type="text" name="emails_builder[email][subject]" class="large-text" value="' . esc_attr((string) ($activeTemplate['subject'] ?? '')) . '" /></p>';
+        echo '</div>';
+
+        echo '<div class="emonks-tab-panel is-active" data-email-panel="visual">';
+        echo '<div class="emonks-editor-section"><h3 class="emonks-editor-title">Visual (HTML)</h3>';
+        wp_editor((string) ($activeTemplate['body_html'] ?? ''), 'emails_builder_body_html', [
+            'textarea_name' => 'emails_builder[email][body_html]',
+            'textarea_rows' => 12,
+            'media_buttons' => false,
+        ]);
+        echo '</div></div>';
+
+        echo '<div class="emonks-tab-panel" data-email-panel="text">';
+        echo '<div class="emonks-editor-section"><h3 class="emonks-editor-title">Text</h3>';
+        echo '<p><textarea name="emails_builder[email][body_text]" rows="12" class="large-text code">' . esc_textarea((string) ($activeTemplate['body_text'] ?? '')) . '</textarea></p>';
+        echo '</div></div>';
+
+        echo '<div class="emonks-editor-section"><h3 class="emonks-editor-title">Geavanceerd</h3><div class="emonks-settings-grid">';
+        echo '<p><label>From name<input type="text" name="emails_builder[email][from_name]" class="regular-text" value="' . esc_attr((string) ($activeTemplate['from_name'] ?? '')) . '" /></label></p>';
+        echo '<p><label>From e-mail<input type="email" name="emails_builder[email][from_email]" class="regular-text" value="' . esc_attr((string) ($activeTemplate['from_email'] ?? '')) . '" /></label></p>';
+        echo '<p><label>Reply-to<input type="email" name="emails_builder[email][reply_to]" class="regular-text" value="' . esc_attr((string) ($activeTemplate['reply_to'] ?? '')) . '" /></label></p>';
+        echo '<p><label>Conditions (JSON)<input type="text" name="emails_builder[email][conditions_json]" class="regular-text" value="' . esc_attr(wp_json_encode($activeTemplate['conditions'] ?? [])) . '" /></label></p>';
+        echo '</div></div>';
+
+        echo '<div class="emonks-editor-section"><h3 class="emonks-editor-title">Slimme velden</h3><ul>';
+        foreach (emonks_email_token_catalog() as $token => $description) {
+            echo '<li><code>{{ ' . esc_html($token) . ' }}</code> - ' . esc_html($description) . '</li>';
+        }
+        echo '</ul></div>';
+
+        echo '<div class="emonks-editor-section"><h3 class="emonks-editor-title">Preview</h3>';
+        echo '<p><strong>Onderwerp:</strong> ' . esc_html((string) ($preview['subject'] ?? '')) . '</p>';
+        echo '<p><strong>HTML:</strong></p><div style="border:1px solid #dcdcde;padding:10px;background:#fff;">' . wp_kses_post((string) ($preview['body_html'] ?? '')) . '</div>';
+        echo '<p><strong>Text:</strong></p><pre style="white-space:pre-wrap;">' . esc_html((string) ($preview['body_text'] ?? '')) . '</pre>';
+        echo '</div>';
+
+        submit_button('Email template opslaan');
+        $this->renderSettingsFormEnd();
+
+        echo '<div class="emonks-danger-zone"><h3>Template verwijderen</h3>';
+        $this->renderSettingsFormStart('emails_builder');
+        echo '<input type="hidden" name="emails_builder[action]" value="delete" />';
+        echo '<input type="hidden" name="emails_builder[email_key]" value="' . esc_attr($activeKey) . '" />';
+        echo '<button type="submit" class="button button-link-delete" onclick="return confirm(\'Weet je zeker dat je deze template wilt verwijderen?\')">Template verwijderen</button>';
+        $this->renderSettingsFormEnd();
+        echo '</div>';
+
+        echo '</div></div></div>';
+        echo '<script>document.addEventListener(\"DOMContentLoaded\",function(){document.querySelectorAll(\"[data-toggle-email-create]\").forEach(function(btn){btn.addEventListener(\"click\",function(){document.querySelectorAll(\"[data-email-create-form]\").forEach(function(p){p.classList.toggle(\"is-open\")})})});document.querySelectorAll(\"[data-email-tab]\").forEach(function(tab){tab.addEventListener(\"click\",function(){var t=tab.getAttribute(\"data-email-tab\");document.querySelectorAll(\"[data-email-tab]\").forEach(function(i){i.classList.remove(\"nav-tab-active\")});tab.classList.add(\"nav-tab-active\");document.querySelectorAll(\"[data-email-panel]\").forEach(function(p){p.classList.toggle(\"is-active\",p.getAttribute(\"data-email-panel\")===t)})})});});</script>';
+    }
+
+    private function renderEmailCreateForm(): void
+    {
+        $this->renderSettingsFormStart('emails_builder');
+        echo '<input type="hidden" name="emails_builder[action]" value="create" />';
+        echo '<p><label>Key<br><input type="text" name="emails_builder[new][key]" class="regular-text" placeholder="bijv custom_notification" /></label></p>';
+        echo '<p><label>Label<br><input type="text" name="emails_builder[new][label]" class="regular-text" /></label></p>';
+        echo '<p><label>Trigger<br><select name="emails_builder[new][trigger]">';
+        foreach ($this->emailTriggerOptions() as $trigger => $label) {
+            echo '<option value="' . esc_attr($trigger) . '">' . esc_html($label) . '</option>';
+        }
+        echo '</select></label></p>';
+        submit_button('Template aanmaken', 'secondary', 'submit', false);
+        $this->renderSettingsFormEnd();
+    }
+
     public function renderServicesPage(): void
     {
         $schemas = emonks_get_service_schemas();
@@ -906,6 +1390,32 @@ HTML;
         } elseif ($tab === 'settings') {
             $current = array_replace_recursive($current, $sanitized);
             unset($current['modules'], $current['form_schemas']);
+        } elseif ($tab === 'user_menu') {
+            $userMenuService = Plugin::instance()->get('user_menu');
+            $defaults = $userMenuService instanceof UserMenu ? $userMenuService->defaults() : [
+                'enabled' => false,
+                'show_avatar' => true,
+                'name_mode' => 'full',
+                'link_type' => 'link',
+                'button_style' => 'btn-primary',
+                'links' => ['account' => true, 'workspaces' => true, 'settings' => true, 'billing' => true, 'logout' => true],
+            ];
+            $incoming = is_array($sanitized['user_menu'] ?? null) ? $sanitized['user_menu'] : [];
+            $next = $defaults;
+            $next['enabled'] = ! empty($incoming['enabled']);
+            $next['show_avatar'] = ! empty($incoming['show_avatar']);
+            $nameMode = (string) ($incoming['name_mode'] ?? 'full');
+            $next['name_mode'] = in_array($nameMode, ['full', 'first', 'display'], true) ? $nameMode : 'full';
+            $linkType = (string) ($incoming['link_type'] ?? 'link');
+            $next['link_type'] = in_array($linkType, ['link', 'button'], true) ? $linkType : 'link';
+            $buttonStyle = (string) ($incoming['button_style'] ?? 'btn-primary');
+            $allowedStyles = ['btn-light', 'btn-outline-contrast', 'btn-dark', 'btn-primary', 'btn-gradient-light', 'btn-gradient-dark'];
+            $next['button_style'] = in_array($buttonStyle, $allowedStyles, true) ? $buttonStyle : 'btn-primary';
+            $next['links'] = [];
+            foreach (['account', 'workspaces', 'settings', 'billing', 'logout'] as $linkKey) {
+                $next['links'][$linkKey] = ! empty($incoming['links'][$linkKey]);
+            }
+            $current['user_menu'] = $next;
         } elseif ($tab === 'fields_builder') {
             $builder = isset($_POST['fields_builder']) ? wp_unslash($_POST['fields_builder']) : [];
             $builder = is_array($builder) ? $builder : [];
@@ -987,6 +1497,45 @@ HTML;
             }
 
             $current['form_templates'] = ['schema_version' => 1, 'forms' => $forms];
+        } elseif ($tab === 'emails_builder') {
+            $builder = isset($_POST['emails_builder']) ? wp_unslash($_POST['emails_builder']) : [];
+            $builder = is_array($builder) ? $builder : [];
+            $existing = emonks_get_email_templates();
+            $templates = is_array($existing['templates'] ?? null) ? $existing['templates'] : [];
+            $action = sanitize_key((string) ($builder['action'] ?? 'update'));
+
+            if ($action === 'create') {
+                $new = is_array($builder['new'] ?? null) ? $builder['new'] : [];
+                $newKey = sanitize_key((string) ($new['key'] ?? ''));
+                if ($newKey === '') {
+                    emonks_flash_add('settings_warning', 'Email template key is verplicht.');
+                } elseif (isset($templates[$newKey])) {
+                    emonks_flash_add('settings_warning', 'Email template key bestaat al.');
+                } else {
+                    $templates[$newKey] = $this->sanitizeEmailTemplate($newKey, $new, []);
+                    $redirectUrl = admin_url('admin.php?page=emonks-saas-emails&email=' . rawurlencode($newKey));
+                }
+            } elseif ($action === 'delete') {
+                $emailKey = sanitize_key((string) ($builder['email_key'] ?? ''));
+                if ($emailKey === '' || ! isset($templates[$emailKey])) {
+                    emonks_flash_add('settings_warning', 'Onbekende email template voor verwijderen.');
+                } else {
+                    unset($templates[$emailKey]);
+                    emonks_flash_add('settings_success', 'Email template verwijderd.');
+                    $redirectUrl = admin_url('admin.php?page=emonks-saas-emails');
+                }
+            } else {
+                $emailKey = sanitize_key((string) ($builder['email_key'] ?? ''));
+                $emailData = is_array($builder['email'] ?? null) ? $builder['email'] : [];
+                if ($emailKey === '' || ! isset($templates[$emailKey])) {
+                    emonks_flash_add('settings_warning', 'Onbekende email template voor update.');
+                } else {
+                    $templates[$emailKey] = $this->sanitizeEmailTemplate($emailKey, $emailData, is_array($templates[$emailKey]) ? $templates[$emailKey] : []);
+                    $redirectUrl = admin_url('admin.php?page=emonks-saas-emails&email=' . rawurlencode($emailKey));
+                }
+            }
+
+            $current['email_templates'] = ['schema_version' => 1, 'templates' => $templates];
         } elseif ($tab === 'services_builder') {
             $builder = isset($_POST['services_builder']) ? wp_unslash($_POST['services_builder']) : [];
             $builder = is_array($builder) ? $builder : [];
@@ -1143,6 +1692,42 @@ HTML;
     private function renderKpiCard(string $label, string $value): void
     {
         echo '<div class="emonks-card"><div>' . esc_html($label) . '</div><div class="emonks-kpi">' . esc_html($value) . '</div></div>';
+    }
+
+    private function renderDashboardKpi(string $label, string $value): void
+    {
+        echo '<div class="emonks-kpi-card">';
+        echo '<div class="emonks-kpi-label">' . esc_html($label) . '</div>';
+        echo '<div class="emonks-kpi-value">' . esc_html($value) . '</div>';
+        echo '</div>';
+    }
+
+    private function renderSetupMetric(string $label, string $value): void
+    {
+        echo '<div class="emonks-setup-metric">';
+        echo '<strong>' . esc_html($value) . '</strong>';
+        echo '<span class="emonks-muted">' . esc_html($label) . '</span>';
+        echo '</div>';
+    }
+
+    /** @param array<string,int> $distribution */
+    private function renderPlanDistribution(array $distribution): void
+    {
+        $total = array_sum(array_map('intval', $distribution));
+        if ($total <= 0) {
+            echo '<p class="emonks-muted">Nog geen gebruikers met planinformatie.</p>';
+            return;
+        }
+
+        foreach ($distribution as $plan => $count) {
+            $safeCount = max(0, (int) $count);
+            $percentage = $safeCount > 0 ? max(4, (int) round(($safeCount / $total) * 100)) : 0;
+            echo '<div class="emonks-plan-row">';
+            echo '<strong>' . esc_html((string) $plan) . '</strong>';
+            echo '<div class="emonks-plan-bar"><span class="emonks-plan-fill" style="width:' . esc_attr((string) $percentage) . '%"></span></div>';
+            echo '<span>' . esc_html((string) $safeCount) . '</span>';
+            echo '</div>';
+        }
     }
 
     private function renderPageHeader(string $title, string $subtitle, string $tip): void
@@ -1397,6 +1982,74 @@ HTML;
     private function allowedFieldTypes(): array
     {
         return ['text', 'email', 'password', 'url', 'textarea', 'select', 'checkbox', 'hidden'];
+    }
+
+    /** @return array<string,string> */
+    private function emailTriggerOptions(): array
+    {
+        return [
+            'emonks_account_registered' => 'Account registered',
+            'emonks_workspace_created' => 'Workspace created',
+            'emonks_workspace_updated' => 'Workspace updated',
+            'emonks_billing_plan_changed' => 'Billing plan changed',
+            'emonks_auth_login_failed' => 'Auth login failed',
+        ];
+    }
+
+    /** @param array<string,mixed> $incoming @param array<string,mixed> $existing @return array<string,mixed> */
+    private function sanitizeEmailTemplate(string $templateKey, array $incoming, array $existing): array
+    {
+        $key = sanitize_key($templateKey);
+        $trigger = sanitize_key((string) ($incoming['trigger'] ?? ($existing['trigger'] ?? 'emonks_account_registered')));
+        if (! array_key_exists($trigger, $this->emailTriggerOptions())) {
+            $trigger = 'emonks_account_registered';
+        }
+
+        $targets = is_array($incoming['recipients']['targets'] ?? null) ? $incoming['recipients']['targets'] : ($existing['recipients']['targets'] ?? ['current_user']);
+        $targets = array_values(array_unique(array_filter(array_map(static fn($item) => sanitize_key((string) $item), is_array($targets) ? $targets : []))));
+        $allowedTargets = ['current_user', 'account_owner', 'site_admin'];
+        $targets = array_values(array_filter($targets, static fn($target) => in_array($target, $allowedTargets, true)));
+        if (empty($targets)) {
+            $targets = ['current_user'];
+        }
+
+        $extraCsv = sanitize_text_field((string) ($incoming['recipients']['extra_csv'] ?? ''));
+        $extra = [];
+        foreach (explode(',', $extraCsv) as $email) {
+            $email = sanitize_email(trim($email));
+            if ($email !== '') {
+                $extra[] = $email;
+            }
+        }
+        $extra = array_values(array_unique($extra));
+
+        $conditions = [];
+        $conditionsJson = trim((string) ($incoming['conditions_json'] ?? ''));
+        if ($conditionsJson !== '') {
+            $decoded = json_decode($conditionsJson, true);
+            if (is_array($decoded)) {
+                $conditions = $decoded;
+            }
+        }
+
+        return [
+            'key' => $key,
+            'label' => sanitize_text_field((string) ($incoming['label'] ?? ($existing['label'] ?? $key))),
+            'enabled' => ! empty($incoming['enabled']),
+            'trigger' => $trigger,
+            'recipients' => [
+                'targets' => $targets,
+                'extra' => $extra,
+            ],
+            'subject' => sanitize_text_field((string) ($incoming['subject'] ?? ($existing['subject'] ?? 'Notification'))),
+            'body_html' => wp_kses_post((string) ($incoming['body_html'] ?? ($existing['body_html'] ?? ''))),
+            'body_text' => sanitize_textarea_field((string) ($incoming['body_text'] ?? ($existing['body_text'] ?? ''))),
+            'from_name' => sanitize_text_field((string) ($incoming['from_name'] ?? ($existing['from_name'] ?? ''))),
+            'from_email' => sanitize_email((string) ($incoming['from_email'] ?? ($existing['from_email'] ?? ''))),
+            'reply_to' => sanitize_email((string) ($incoming['reply_to'] ?? ($existing['reply_to'] ?? ''))),
+            'conditions' => $conditions,
+            'updated_at' => wp_date('Y-m-d H:i:s'),
+        ];
     }
 
     /** @param array<string,mixed> $field */

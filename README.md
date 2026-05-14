@@ -27,14 +27,22 @@ Dependency:
 - `timber/timber:^2.0`
 
 ## WP Admin Omgeving
-Nieuwe admin sectie:
+Belangrijkste admin secties:
 - `Emonks SaaS > Dashboard`
-- `Emonks SaaS > General`
-- `Emonks SaaS > Billing`
-- `Emonks SaaS > Plans`
+- `Emonks SaaS > Services`
+- `Emonks SaaS > Fields`
+- `Emonks SaaS > Forms`
 - `Emonks SaaS > Features`
-- `Emonks SaaS > Onboarding`
+- `Emonks SaaS > Plans`
+- `Emonks SaaS > Billing`
+- `Emonks SaaS > SaaS Health`
 - `Emonks SaaS > Logs`
+- `Emonks SaaS > Settings`
+
+`Emonks SaaS > Settings` bevat tabs voor:
+- `Algemeen`
+- `Shortcodes`
+- `Profielmenu`
 
 ## Stripe setup
 Voeg constants toe in `wp-config.php`:
@@ -154,8 +162,6 @@ Voorbeeld overrides:
 
 ## Documentatie
 Uitgebreide docs:
-- `/docs/functioneel-ontwerp.md`
-- `/docs/technisch-ontwerp.md`
 - `/docs/billing.md`
 - `/docs/feature-flags.md`
 - `/docs/rest-api.md`
@@ -163,3 +169,9 @@ Uitgebreide docs:
 - `/docs/security.md`
 - `/docs/services.md`
 - `/docs/theme-overrides.md`
+- `/docs/user-menu.md`
+
+## Onderhoudsafspraak docs
+- Werk docs direct bij bij functionele wijzigingen.
+- Verwijder verouderde tekst zodra gedrag/flows wijzigen.
+- Raadpleeg docs eerst bij nieuwe wijzigingen, zodat implementatie en documentatie in sync blijven.

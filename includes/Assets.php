@@ -21,6 +21,11 @@ final class Assets
     public function enqueueFrontend(): void
     {
         $route = (string) get_query_var('emonks_route');
+        $userMenu = Plugin::instance()->get('user_menu');
+        if ($userMenu instanceof UserMenu && $userMenu->isEnabled() && is_user_logged_in()) {
+            wp_enqueue_script('emonks-saas-user-menu', EMONKS_SAAS_CORE_URL . 'assets/js/user-menu.js', [], EMONKS_SAAS_CORE_VERSION, true);
+            wp_enqueue_style('emonks-saas-user-menu', EMONKS_SAAS_CORE_URL . 'assets/css/user-menu.css', [], EMONKS_SAAS_CORE_VERSION);
+        }
 
         if (str_starts_with($route, 'account_') || str_starts_with($route, 'auth_')) {
             wp_enqueue_script('emonks-saas-account', EMONKS_SAAS_CORE_URL . 'assets/js/account.js', [], EMONKS_SAAS_CORE_VERSION, true);

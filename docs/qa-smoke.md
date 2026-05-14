@@ -29,3 +29,13 @@
 2. Selecteer een ACF field group bij een service of veld.
 3. Verwacht: dropdown toont naam plus key.
 4. De plugin mag niet fatalen als ACF uit staat.
+
+## Profielmenu
+
+1. Open `Emonks SaaS > Profielmenu` en zet `enabled` aan.
+2. Kies `name_mode`, `link_type` en `button_style`.
+3. Gebruik "Direct toevoegen aan bestaand menu" en selecteer een menu.
+4. Controleer in frontend:
+5. Ingelogd: profiel parent zichtbaar met geconfigureerde dropdown links.
+6. Uitgelogd: profielmenu niet zichtbaar.
+7. Wijzig `link_type` van `link` naar `button` en bevestig visuele wijziging.

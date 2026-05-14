@@ -81,6 +81,16 @@ final class RestApi
             'callback' => [$this, 'configServicesUpdate'],
             'permission_callback' => [$this, 'canManageConfig'],
         ]);
+        register_rest_route('emonks/v1', '/config/emails/(?P<key>[a-z0-9_\\-]+)', [
+            'methods' => 'GET',
+            'callback' => [$this, 'configEmailsGet'],
+            'permission_callback' => [$this, 'canManageConfig'],
+        ]);
+        register_rest_route('emonks/v1', '/config/emails/(?P<key>[a-z0-9_\\-]+)', [
+            'methods' => 'PUT,PATCH',
+            'callback' => [$this, 'configEmailsUpdate'],
+            'permission_callback' => [$this, 'canManageConfig'],
+        ]);
     }
 
     public function health(): \WP_REST_Response
@@ -316,6 +326,27 @@ final class RestApi
         $services = is_array($all['services'] ?? null) ? $all['services'] : [];
         $services[$key] = $schema;
         emonks_update_setting('service_schemas', ['schema_version' => 1, 'config_model' => 'dynamic_services_v1', 'services' => $services]);
+        return new \WP_REST_Response(['ok' => true], 200);
+    }
+
+    public function configEmailsGet(\WP_REST_Request $request): \WP_REST_Response
+    {
+        $key = sanitize_key((string) $request['key']);
+        return new \WP_REST_Response(['key' => $key, 'schema' => emonks_get_email_template($key)], 200);
+    }
+
+    public function configEmailsUpdate(\WP_REST_Request $request): \WP_REST_Response
+    {
+        $key = sanitize_key((string) $request['key']);
+        $schema = $request->get_json_params();
+        if (! is_array($schema)) {
+            return emonks_rest_error('invalid_payload', 'Invalid schema payload', [], 422);
+        }
+
+        $all = emonks_get_email_templates();
+        $templates = is_array($all['templates'] ?? null) ? $all['templates'] : [];
+        $templates[$key] = $schema;
+        emonks_update_setting('email_templates', ['schema_version' => 1, 'templates' => $templates]);
         return new \WP_REST_Response(['ok' => true], 200);
     }
 }
