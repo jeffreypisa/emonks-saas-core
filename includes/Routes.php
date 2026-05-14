@@ -66,8 +66,6 @@ final class Routes
         add_rewrite_rule('^' . $r['account'] . '/' . $r['billing'] . '/?$', 'index.php?emonks_route=account_billing', 'top');
         add_rewrite_rule('^' . $r['account'] . '/' . $r['settings'] . '/?$', 'index.php?emonks_route=account_settings', 'top');
         add_rewrite_rule('^' . $r['account'] . '/' . $r['onboarding'] . '/?$', 'index.php?emonks_route=account_onboarding', 'top');
-        add_rewrite_rule('^' . $r['account'] . '/services/client-portal/?$', 'index.php?emonks_route=account_client_portal', 'top');
-        add_rewrite_rule('^' . $r['account'] . '/services/client-portal/([0-9]+)/?$', 'index.php?emonks_route=account_client_portal_item&emonks_item_id=$matches[1]', 'top');
         add_rewrite_rule('^' . $r['login'] . '/?$', 'index.php?emonks_route=auth_login', 'top');
         add_rewrite_rule('^' . $r['register'] . '/?$', 'index.php?emonks_route=auth_register', 'top');
         add_rewrite_rule('^' . $r['logout'] . '/?$', 'index.php?emonks_route=auth_logout', 'top');
@@ -111,10 +109,6 @@ final class Routes
                 $dashboard->renderPublicWorkspace();
                 break;
             default:
-                if (str_starts_with((string) $route, 'account_client_portal') && ! emonks_module_enabled('client_portal')) {
-                    status_header(404);
-                    exit;
-                }
                 $dashboard->handleAccountRoute((string) $route);
                 break;
         }

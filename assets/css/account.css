@@ -9,6 +9,34 @@
   --emonks-color-danger: #b42318;
 }
 
+.emonks-saas-section.bg-light {
+  background: #f8fafc;
+}
+
+.emonks-saas-section.bg-dark {
+  background: #0f172a;
+}
+
+.emonks-saas-section.bg-gradient-dark {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 45%, #0b1120 100%);
+}
+
+.emonks-saas-section.bg-gradient-light {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 45%, #f1f5f9 100%);
+}
+
+.emonks-saas-section.bg-primary {
+  background: #0d6efd;
+}
+
+.emonks-saas-section.bg-greylight {
+  background: #e5e7eb;
+}
+
+.emonks-saas-section.bg-transparent {
+  background: transparent;
+}
+
 .emonks-account-shell .card {
   border-radius: 14px;
 }

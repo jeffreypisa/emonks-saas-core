@@ -1,28 +1,28 @@
-# Architecture
+# Architectuur
 
-## Scheiding
-- Plugin: data, routing, permissies, modules, REST
-- Theme: alle frontend rendering (Twig) en styling
+Emonks SaaS is nu een config-first SaaS fundament zonder vaste service-modules.
 
-## Mapgrenzen
-- `includes/Core/`: generieke platformregels (accounts, permissions, policy, routing)
-- `includes/Modules/`: dienstspecifieke modules (Client Portal, later Guestbook)
-- `includes/Infrastructure/`: technische diensten (template loader, settings, logging, webhooks, rest wiring)
-- `templates/`: plugin defaults die door theme overschreven kunnen worden
-- `docs/`: architectuur, ADRs, security, API, implementatiekeuzes
+De plugin levert:
+- accounts, memberships en workspaces
+- service builder
+- centrale field library
+- herbruikbare form templates
+- features, plans en billing hooks
+- routing, permissies, health checks en genormaliseerde theme-context
 
-## Core services (huidig)
-- Accounts + memberships
-- Workspaces als service instances
-- Policy service voor capability checks
-- Module registry voor lifecycle/toggles
-- Service items domein voor module-data
+De plugin levert niet:
+- hardcoded diensten zoals client portal of guestbook
+- module toggles
+- service-specifieke templates als verplicht onderdeel
+- pagebuilder-achtige frontend styling
 
-## Rendering
-Plugin levert default templates.
-Theme overrides via `templates/emonks-saas/...` hebben prioriteit.
+## Lagen
 
-## Module model
-- Contract via `ModuleInterface`
-- Registratie via `emonks_register_modules`
-- Enabled/disabled via settings
+1. Core: accounts, workspaces, plans, billing, permissions, routing.
+2. Config: fields, forms, services, features.
+3. Runtime: resolved forms per service-context en workspace-data.
+4. Theme: Twig/Bootstrap-presentatie en optionele service-specifieke overrides.
+
+## Verse installatie
+
+Bij een verse installatie zijn er geen services. Dat is bewust. De gebruiker start in `Emonks SaaS > Setup` en maakt daarna zelf services aan.

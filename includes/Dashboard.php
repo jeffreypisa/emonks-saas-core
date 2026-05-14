@@ -33,9 +33,18 @@ final class Dashboard
         $context['billing_active'] = emonks_user_has_active_subscription($userId);
         $context['workspace_status_counts'] = emonks_get_workspace_status_counts($userId);
         $context['dashboard_cards'] = apply_filters('emonks_dashboard_cards', [], $userId);
-        $context['service_types'] = Services::all();
+        $context['service_types'] = emonks_get_available_services_for_plan((string) $context['current_plan']);
+        $context['all_service_types'] = Services::all();
         $context['service_schemas'] = emonks_get_service_schemas();
+        $context['field_library'] = emonks_get_field_library();
+        $context['form_templates'] = emonks_get_form_templates();
+        $context['acf_available'] = emonks_acf_available();
+        $context['acf_groups'] = emonks_get_acf_field_groups();
         $context['workspace_create_form'] = emonks_get_form_schema('workspace_create');
+        $context['workspace_create_service_forms'] = [];
+        foreach (array_keys($context['all_service_types']) as $serviceKey) {
+            $context['workspace_create_service_forms'][$serviceKey] = emonks_resolve_forms_for_context((string) $serviceKey, 'workspace_create');
+        }
         $context['workspace_statuses'] = WorkspaceStatuses::all();
         $context['next_action'] = $this->resolveNextAction($userId, $context);
         $context['admin_post'] = [
@@ -52,8 +61,6 @@ final class Dashboard
             'account_billing' => 'account/billing.twig',
             'account_settings' => 'account/settings.twig',
             'account_onboarding' => 'account/onboarding.twig',
-            'account_client_portal' => 'modules/client-portal/index.twig',
-            'account_client_portal_item' => 'modules/client-portal/item.twig',
             default => 'account/dashboard.twig',
         };
 
@@ -63,7 +70,11 @@ final class Dashboard
                 wp_die(esc_html__('You cannot access this workspace.', 'emonks-saas-core'), 403);
             }
             $context['workspace'] = get_post($workspaceId);
-            $context['workspace_service_data'] = emonks_get_workspace_service_data($workspaceId);
+            $serviceContext = emonks_get_workspace_service_context($workspaceId);
+            $context['workspace_service_data'] = $serviceContext['service_data'];
+            $context['workspace_acf_data'] = $serviceContext['acf_data'];
+            $context['workspace_service_context'] = $serviceContext;
+            $context['workspace_service_forms'] = $serviceContext['forms']['workspace_edit'] ?? [];
         }
 
         if ($route === 'account_billing') {
@@ -72,36 +83,6 @@ final class Dashboard
                 'cycle' => sanitize_key((string) ($_GET['preview_cycle'] ?? '')),
                 'is_upgrade' => (string) ($_GET['preview_upgrade'] ?? '0') === '1',
             ];
-        }
-
-        if ($route === 'account_client_portal' || $route === 'account_client_portal_item') {
-            $accountId = (int) ($context['current_account_id'] ?? 0);
-            $policy = Plugin::instance()->get('policy');
-            if (! $policy instanceof Policy || ! $policy->can($userId, 'cp_view', $accountId)) {
-                wp_die(esc_html__('You cannot access client portal.', 'emonks-saas-core'), 403);
-            }
-
-            $itemsService = Plugin::instance()->get('service_items');
-            if ($itemsService instanceof ServiceItems) {
-                $context['cp_items'] = $itemsService->listByAccount($accountId, 'client_portal');
-            } else {
-                $context['cp_items'] = [];
-            }
-
-            if ($route === 'account_client_portal_item') {
-                $itemId = absint((string) get_query_var('emonks_item_id'));
-                $item = get_post($itemId);
-                if (! $item instanceof \WP_Post || $item->post_type !== 'emonks_service_item') {
-                    wp_die(esc_html__('Item not found.', 'emonks-saas-core'), 404);
-                }
-
-                if (! emonks_can_access_entity_account('service_item', $itemId, $userId)) {
-                    wp_die(esc_html__('Forbidden item access.', 'emonks-saas-core'), 403);
-                }
-
-                $context['cp_item'] = $item;
-                $context['cp_item_status'] = sanitize_key((string) get_post_meta($itemId, 'status', true));
-            }
         }
 
         emonks_render_template($template, $context);
@@ -154,10 +135,16 @@ final class Dashboard
         }
 
         $ownerId = (int) $workspace->post_author;
+        $serviceType = sanitize_key((string) emonks_get_workspace_meta($workspaceId, 'service_type', ''));
+        $policy = emonks_get_service_policy($serviceType);
+        $requiresBilling = (bool) ($policy['can_publish_requires_billing'] ?? true);
+        $billingBlocked = $requiresBilling
+            && ! emonks_is_billing_test_mode()
+            && ! emonks_user_has_active_subscription($ownerId);
 
         if (
             ! emonks_workspace_has_status($workspaceId, 'published')
-            || ! emonks_user_has_active_subscription($ownerId)
+            || $billingBlocked
         ) {
             status_header(404);
             return;
@@ -166,15 +153,15 @@ final class Dashboard
         $context = emonks_default_context();
         $context['workspace'] = $workspace;
         $context['owner'] = get_userdata($ownerId);
-        $context['service_type'] = emonks_get_workspace_meta($workspaceId, 'service_type', '');
+        $context['service_type'] = $serviceType;
         $context['settings'] = emonks_get_workspace_meta($workspaceId, 'settings', []);
-        $context['service_data'] = emonks_get_workspace_service_data($workspaceId);
-        $serviceSchema = emonks_get_service_schema((string) $context['service_type']);
+        $serviceContext = emonks_get_workspace_service_context($workspaceId);
+        $context['service_data'] = $serviceContext['service_data'];
+        $context['acf_data'] = $serviceContext['acf_data'];
+        $context['service_context'] = $serviceContext;
+        $context['field_source'] = $serviceContext['field_source'];
+        $serviceSchema = is_array($serviceContext['service'] ?? null) ? $serviceContext['service'] : emonks_get_service_schema((string) $context['service_type']);
         $context['service_schema'] = $serviceSchema;
-        if ((string) $context['service_type'] === 'guestbook' && ! emonks_module_enabled('guestbook')) {
-            status_header(404);
-            return;
-        }
         $preferredTemplate = sanitize_text_field((string) ($serviceSchema['render_hints']['template'] ?? ''));
         $template = $preferredTemplate !== '' ? $preferredTemplate : 'public/workspace.twig';
         emonks_render_template($template, $context);

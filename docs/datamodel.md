@@ -1,38 +1,25 @@
 # Datamodel
 
-## Core
-- `emonks_account` (CPT)
-- `emonks_workspace` (CPT, service instance)
-- `{$wpdb->prefix}emonks_account_memberships` (custom table)
+Belangrijkste settings in `emonks_saas_settings`:
 
-## Workspace verplichte scope
-- `account_id`
-- `module_key`
-- `service_type`
+- `field_library`
+- `form_templates`
+- `service_schemas`
+- `feature_flags`
+- `billing`
+- `branding`
 
-## Module data (fase 2)
-- `emonks_service_item` (CPT)
-- Meta:
-  - `account_id`
-  - `workspace_id`
-  - `module_key`
-  - `status`
-  - `updated_at`
+`service_schemas` gebruikt `config_model = dynamic_services_v1`. Oudere service settings zonder dit model worden bewust genegeerd, zodat vaste legacy services niet terugkomen.
 
-## Keuzecriteria opslag
-- Gebruik CPT wanneer:
-  - item in WP admin beheerd moet worden
-  - queryvolumes beperkt zijn
-  - standaard WP lifecycle gewenst is
-- Gebruik custom table wanneer:
-  - veel writes/events verwacht worden
-  - relationele queries centraal staan
-  - audit/analytics op schaal nodig zijn
-- Gebruik ACF/meta wanneer:
-  - redactiedata flexibel moet blijven
-  - geen zware relationele eisen gelden
+Verwijderd uit het actieve model:
+- oude form schema opslag
+- oude module toggles
+- inline service fields
+- hardcoded module registry
 
-## Principes
-- Relationele account-user koppeling via custom table
-- Alle module-data is account-gescopeerd
-- Geen records zonder account-scope
+Workspace data:
+- core data in post fields en postmeta
+- plugin service values in `service_data_json`
+- ACF values in ACF/postmeta
+
+Services zijn leeg bij verse installatie en worden via `Emonks SaaS > Services` aangemaakt.

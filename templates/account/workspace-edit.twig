@@ -5,7 +5,7 @@
 {% endblock %}
 
 {% block content %}
-<section class="section emonks-saas-section">
+<section class="section emonks-saas-section {{ template_background_class }}">
 <div class="container py-4 py-lg-5 emonks-account-shell">
   {% if flash_messages %}
     <div class="mb-3">
@@ -23,18 +23,11 @@
             {{ function('wp_nonce_field', 'emonks_workspace_save', 'emonks_nonce') }}
             <input type="hidden" name="workspace_id" value="{{ workspace.ID }}">
             <input type="hidden" name="account_id" value="{{ function('emonks_get_workspace_meta', workspace.ID, 'account_id', current_account_id) }}">
+            {% set current_service = function('emonks_get_workspace_meta', workspace.ID, 'service_type', 'generic') %}
+            <input type="hidden" id="ws_service" name="service_type" value="{{ current_service }}">
             <div class="col-12">
               <label class="form-label" for="ws_title">Naam</label>
               <input id="ws_title" name="title" class="form-control" value="{{ workspace.post_title }}" required>
-            </div>
-            <div class="col-12 col-md-6">
-              <label class="form-label" for="ws_service">Service type</label>
-              {% set current_service = function('emonks_get_workspace_meta', workspace.ID, 'service_type', 'generic') %}
-              <select id="ws_service" name="service_type" class="form-select">
-                {% for service_key, service in service_types %}
-                  <option value="{{ service_key }}" {{ service_key == current_service ? 'selected' : '' }}>{{ service.labels.singular|default(service_key|capitalize) }}</option>
-                {% endfor %}
-              </select>
             </div>
             <div class="col-12 col-md-6">
               <label class="form-label" for="ws_status">Status</label>
@@ -83,7 +76,7 @@
     var serviceSelect = document.getElementById('ws_service');
     var wrap = document.getElementById('service-fields-wrap');
     var grid = document.getElementById('service-fields-grid');
-    var schemas = {{ service_schemas.services|default({})|json_encode|raw }};
+    var serviceForms = {{ (workspace_create_service_forms|default({}))|json_encode|raw }};
     var currentData = {{ workspace_service_data|default({})|json_encode|raw }};
     if (!serviceSelect || !wrap || !grid) { return; }
 
@@ -95,8 +88,9 @@
 
     function renderFields() {
       var serviceKey = serviceSelect.value;
-      var schema = schemas[serviceKey] || null;
-      var fields = schema && Array.isArray(schema.fields) ? schema.fields : [];
+      var forms = serviceForms[serviceKey] || [];
+      var fields = [];
+      forms.forEach(function(form){ if (form && Array.isArray(form.fields)) { fields = fields.concat(form.fields); } });
       grid.innerHTML = '';
 
       if (!fields.length) {
@@ -144,7 +138,6 @@
       wrap.classList.remove('d-none');
     }
 
-    serviceSelect.addEventListener('change', renderFields);
     renderFields();
   })();
 </script>

@@ -1,82 +1,33 @@
-# Security & AVG Checklist
+# Security En AVG Checklist
 
-Definition of Done checklist voor taak 22.  
-Gebruik deze lijst per endpoint/form voordat een feature “done” is.
+## Core principes
 
-## 1) Algemene DoD (altijd)
+- Elke mutatie gebruikt nonce-validatie.
+- Account- en workspace-mutaties gebruiken account-scope guards.
+- Input wordt gesanitized per veldtype.
+- Output blijft responsibility van templates en moet escaped worden in Twig/PHP.
+- ACF is optioneel en mag geen permissiebron zijn.
 
-- [ ] Input wordt gesanitized (`sanitize_text_field`, `sanitize_key`, `sanitize_email`, `sanitize_title`, `absint`).
-- [ ] Output wordt escaped (`esc_html`, `esc_attr`, `esc_url`) of bewust via veilige templating.
-- [ ] Autorisatie staat op endpoint-niveau (`permission_callback` of `current_user_can`/policy checks).
-- [ ] Account-scope is expliciet gecontroleerd via `emonks_can_access_entity_account(...)` waar relevant.
-- [ ] Nonce aanwezig voor muterende form-acties (`check_admin_referer`).
-- [ ] Foutresponses geven geen gevoelige details terug.
-- [ ] Alleen noodzakelijke data wordt opgeslagen (dataminimalisatie).
-- [ ] Audit/logging bevat geen plaintext secrets of gevoelige payloads.
+## Config mutaties
 
-## 2) REST DoD per endpoint
+Admin config voor Fields, Forms en Services vereist `manage_options`.
 
-## `/emonks/v1/health` (`GET`)
-- [ ] Alleen technische status, geen gevoelige data.
+Controleer per endpoint/form actie:
+- nonce aanwezig
+- capability check aanwezig
+- keys via `sanitize_key`
+- labels via `sanitize_text_field`
+- textarea via `sanitize_textarea_field`
+- URLs via `esc_url_raw`
+- account/workspace ownership bij user-facing mutaties
 
-## `/emonks/v1/me` (`GET`)
-- [ ] Alleen minimaal profiel (`id`, `email`, `plan`).
+## Publieke workspace
 
-## `/emonks/v1/workspaces` (`GET`, `POST`)
-- [ ] `POST` alleen voor ingelogde users met create-recht.
-- [ ] Workspace altijd gekoppeld aan account van user.
+Publieke pagina is alleen zichtbaar als:
+- workspace status `published` is
+- owner een actieve subscription heeft
+- public slug bestaat
 
-## `/emonks/v1/workspaces/{id}` (`GET`, `PUT/PATCH`)
-- [ ] Read/update alleen bij account-toegang.
-- [ ] Publish-gate checkt subscription + onboarding policy.
-- [ ] Slug conflicts geven nette 422 zonder SQL/details.
+## AVG
 
-## `/emonks/v1/service-items` (`GET`, `POST`)
-- [ ] Module enabled check actief.
-- [ ] Policy checks (`cp_view`, `cp_manage`) actief.
-- [ ] Status valideert tegen `emonks_status_vocabulary()`.
-
-## `/emonks/v1/service-items/{id}` (`GET`, `PUT/PATCH`)
-- [ ] Item access via `emonks_can_access_entity_account('service_item', ...)`.
-- [ ] Geen toegang over accountgrenzen heen.
-
-## 3) Form actions DoD
-
-## `emonks_workspace_save`
-- [ ] `is_user_logged_in()`
-- [ ] nonce `emonks_workspace_save`
-- [ ] edit-check op bestaande workspace
-- [ ] account-toegang op gekozen account-id
-- [ ] publish-gate policies toegepast
-
-## `emonks_billing_checkout` / `emonks_billing_portal` / `emonks_billing_change_plan`
-- [ ] `is_user_logged_in()`
-- [ ] juiste nonce per actie
-- [ ] plan/cycle inputs gesanitized en gevalideerd
-- [ ] test-mode pad en live pad beide afgedekt
-
-## `emonks_saas_save_settings`
-- [ ] `manage_options` verplicht
-- [ ] nonce `emonks_saas_save_settings`
-- [ ] settings sanitizer toegepast
-
-## Form Builder config (nieuw)
-- [ ] Config REST endpoints alleen voor `manage_options`.
-- [ ] JSON schema input wordt gevalideerd op array-structuur vóór opslag.
-- [ ] Runtime form validatie blijft server-side (niet vertrouwen op frontend).
-
-## 4) AVG checks (praktisch MVP)
-
-- [ ] Bewaar alleen noodzakelijke persoonsgegevens (nu: account/user links, e-mail via WP user).
-- [ ] Definieer retention beleid voor logs (`emonks_saas_logs`) en onboarding/meta.
-- [ ] Voeg export/wis-procedure toe op WP user lifecycle (volgende fase).
-- [ ] Documenteer doelbinding per meta-veld (account_id, status, onboarding stappen).
-- [ ] Vermijd IP-opslag tenzij functioneel noodzakelijk en expliciet gedocumenteerd.
-
-## 5) Release gate (quick pass)
-
-Een release mag door als:
-- [ ] route-matrix is bijgewerkt (`docs/routes-matrix.md`)
-- [ ] alle muterende acties nonce + auth + scope checks hebben
-- [ ] handmatige smoke test gedaan op unauthorized access scenario’s
-- [ ] geen debug/secrets zichtbaar in responses of notices
+Bewaar alleen noodzakelijke data in `service_data_json`. Gebruik ACF voor rijke content wanneer dat redactioneel logischer is, maar niet voor autorisatie of subscription checks.

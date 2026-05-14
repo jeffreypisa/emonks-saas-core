@@ -46,7 +46,7 @@ final class ServiceItems
         update_post_meta($id, 'account_id', $accountId);
         update_post_meta($id, 'workspace_id', $workspaceId);
         update_post_meta($id, 'status', $status);
-        update_post_meta($id, 'module_key', sanitize_key((string) emonks_get_workspace_meta($workspaceId, 'module_key', 'client_portal')));
+        update_post_meta($id, 'service_type', sanitize_key((string) emonks_get_workspace_meta($workspaceId, 'service_type', '')));
         update_post_meta($id, 'updated_at', current_time('mysql'));
 
         do_action('emonks_service_item_created', $id, $accountId, $workspaceId, $userId);

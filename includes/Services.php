@@ -18,9 +18,7 @@ final class Services
 
     public function boot(): void
     {
-        $this->registerServicesFromTerms();
         $this->registerServicesFromSchemas();
-        do_action('emonks_register_service_modules');
     }
 
     /** @param array<string,mixed> $definition */
@@ -48,15 +46,24 @@ final class Services
     {
         $defaults = [
             'labels' => ['singular' => ucfirst($key), 'plural' => ucfirst($key) . 's'],
+            'description' => '',
+            'status' => 'active',
+            'field_source_default' => 'plugin',
+            'acf_group_key_default' => '',
+            'form_usages' => [],
             'routes' => [],
             'templates' => [],
             'settings_schema' => [],
-            'fields' => [],
             'dashboard_cards' => [],
             'capabilities' => [],
             'supported_features' => [],
             'onboarding_steps' => [],
             'policy' => '',
+            'render_hints' => [
+                'template' => '',
+                'public_route' => 'g',
+                'dashboard_label' => '',
+            ],
         ];
 
         $normalized = array_replace_recursive($defaults, $definition);
@@ -64,6 +71,16 @@ final class Services
         $normalized['supported_features'] = array_values(array_filter(array_map(static fn($v) => sanitize_key((string) $v), (array) ($normalized['supported_features'] ?? []))));
         $normalized['onboarding_steps'] = array_values(array_filter(array_map(static fn($v) => sanitize_key((string) $v), (array) ($normalized['onboarding_steps'] ?? []))));
         $normalized['policy'] = sanitize_text_field((string) ($normalized['policy'] ?? ''));
+        $normalized['description'] = sanitize_text_field((string) ($normalized['description'] ?? ''));
+        $status = sanitize_key((string) ($normalized['status'] ?? 'active'));
+        $normalized['status'] = in_array($status, ['active', 'draft', 'disabled'], true) ? $status : 'active';
+        $source = sanitize_key((string) ($normalized['field_source_default'] ?? 'plugin'));
+        $normalized['field_source_default'] = in_array($source, ['plugin', 'acf', 'hybrid'], true) ? $source : 'plugin';
+        $normalized['acf_group_key_default'] = sanitize_text_field((string) ($normalized['acf_group_key_default'] ?? ''));
+        $normalized['form_usages'] = is_array($normalized['form_usages'] ?? null) ? $normalized['form_usages'] : [];
+        $normalized['render_hints']['template'] = sanitize_text_field((string) ($normalized['render_hints']['template'] ?? ''));
+        $normalized['render_hints']['public_route'] = sanitize_key((string) ($normalized['render_hints']['public_route'] ?? 'g'));
+        $normalized['render_hints']['dashboard_label'] = sanitize_text_field((string) ($normalized['render_hints']['dashboard_label'] ?? ''));
 
         return $normalized;
     }
@@ -103,6 +120,7 @@ final class Services
                     'singular' => $term->name,
                     'plural' => $term->name,
                 ],
+                'status' => 'active',
                 'supported_features' => $supported,
             ]);
         }
@@ -127,8 +145,13 @@ final class Services
                     'singular' => sanitize_text_field((string) ($schema['label'] ?? ucfirst($serviceKey))),
                     'plural' => sanitize_text_field((string) ($schema['label'] ?? ucfirst($serviceKey) . 's')),
                 ],
-                'supported_features' => is_array($schema['capabilities'] ?? null) ? $schema['capabilities'] : [],
-                'fields' => is_array($schema['fields'] ?? null) ? $schema['fields'] : [],
+                'description' => sanitize_text_field((string) ($schema['description'] ?? '')),
+                'status' => sanitize_key((string) ($schema['status'] ?? 'active')),
+                'field_source_default' => sanitize_key((string) ($schema['field_source_default'] ?? 'plugin')),
+                'acf_group_key_default' => sanitize_text_field((string) ($schema['acf_group_key_default'] ?? '')),
+                'form_usages' => is_array($schema['form_usages'] ?? null) ? $schema['form_usages'] : [],
+                'render_hints' => is_array($schema['render_hints'] ?? null) ? $schema['render_hints'] : [],
+                'supported_features' => is_array($schema['features'] ?? null) ? $schema['features'] : (is_array($schema['capabilities'] ?? null) ? $schema['capabilities'] : []),
             ]);
         }
     }

@@ -1,26 +1,35 @@
 # Services
 
-## Nieuw model (dynamisch)
-Services worden beheerd als losse taxonomie-termen (`emonks_service`) en aan plannen gekoppeld.
+Services zijn dynamische product- of dienstdefinities. Er zijn geen ingebouwde services.
 
-Er zijn geen hardcoded default services meer.
+Een service bevat:
+- key
+- label
+- description
+- status: draft, active, archived
+- features
+- field_source_default: plugin, acf, hybrid
+- acf_group_key_default
+- form_usages
+- render_hints
 
-## Service-level features (technische grens)
-Elke service-term heeft nu `Supported Features`.
-Deze lijst bepaalt welke features technisch mogelijk zijn binnen die service.
+## Form usages
 
-Beheer:
-- `Emonks SaaS > Services`
-- Open service-term
-- Selecteer `Supported Features`
+Een service gebruikt formulieren per context. Voorbeelden:
+- workspace_create
+- workspace_edit
+- public_contact
+- intake
+- feedback
 
-## Runtime gedrag
-- Service-termen worden automatisch geregistreerd als service types in `Services::all()`
-- `supported_features` wordt uit term meta gelezen
+Een service heeft dus niet een enkel workspace-formulier. Het koppelt herbruikbare form templates aan momenten in de flow.
 
-## Relatie met plannen
-Per plan koppel je services en features.
-Een feature is pas echt beschikbaar als:
-- service ondersteunt feature
-- plan bevat feature
-- global feature flag staat aan
+## Publicatie
+
+Publicatie-instellingen staan in `render_hints`:
+- public_enabled
+- template
+- public_route
+- dashboard_label
+
+Het theme mag service-specifieke templates leveren, maar de plugin verplicht geen service-template.

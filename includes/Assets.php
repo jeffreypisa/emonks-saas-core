@@ -29,6 +29,7 @@ final class Assets
 
         if ($route === 'public_workspace') {
             wp_enqueue_script('emonks-saas-public', EMONKS_SAAS_CORE_URL . 'assets/js/public.js', [], EMONKS_SAAS_CORE_VERSION, true);
+            wp_enqueue_style('emonks-saas-account', EMONKS_SAAS_CORE_URL . 'assets/css/account.css', [], EMONKS_SAAS_CORE_VERSION);
         }
     }
 }

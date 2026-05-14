@@ -1,27 +1,15 @@
 # REST API
 
-Namespace: `emonks/v1`
+Core endpoints:
 
-## Core
-- `GET /health`
-- `GET /me`
-- `GET /services`
-- `GET /workspaces`
-- `POST /workspaces`
-- `GET /workspaces/{id}`
-- `PUT|PATCH /workspaces/{id}`
+- `GET /emonks/v1/health`
+- `GET /emonks/v1/me`
+- `GET /emonks/v1/services`
+- `GET /emonks/v1/workspaces`
+- `POST /emonks/v1/workspaces`
+- `GET /emonks/v1/workspaces/{id}`
+- `PUT/PATCH /emonks/v1/workspaces/{id}`
+- `GET/PUT /emonks/v1/config/forms/{key}`
+- `GET/PUT /emonks/v1/config/services/{key}`
 
-## Client Portal module
-- `GET /service-items`
-- `POST /service-items`
-- `GET /service-items/{id}`
-- `PUT|PATCH /service-items/{id}`
-
-### POST /service-items payload
-- `workspace_id` (int, required)
-- `title` (string, required)
-- `status` (string, optional)
-
-### Security
-- Module endpoints alleen actief als module enabled is
-- Account-scope + policy checks verplicht
+Er zijn geen hardcoded service-module endpoints. Nieuwe servicegedrag hoort via dynamische service/form configuratie of expliciete custom extensies te lopen.

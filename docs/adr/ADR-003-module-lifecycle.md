@@ -1,18 +1,20 @@
-# ADR-003 Module Lifecycle
+# ADR-003: Module Lifecycle Vervangen Door Dynamic Services
 
 ## Status
-Geaccepteerd
 
-## Context
-Core moet generiek blijven terwijl modules eigen gedrag/routes/capabilities toevoegen.
+Vervangen.
 
-## Beslissing
-- Modules registreren via `ModuleRegistry`
-- Module toggles via settings (`settings.modules.enabled.{key}`)
-- Basismethodes: `key()`, `boot()`, `isEnabledByDefault()`
-- Uitbreiding richting lifecycle-methodes in fase 2.5 (`registerRoutes`, `registerRest`, `registerCapabilities`, `registerDashboardCards`)
+## Besluit
 
-## Consequenties
-- Lage instap voor nieuwe modules
-- Core blijft compact
-- Geleidelijke uitbreiding mogelijk zonder over-engineering
+Het oude module lifecycle model is verwijderd. Emonks SaaS gebruikt nu dynamische services die via pluginconfiguratie worden aangemaakt.
+
+## Reden
+
+De plugin moet een generiek SaaS fundament zijn voor meerdere websites en projecten. Hardcoded modules zoals client portal of guestbook maken de core te product-specifiek.
+
+## Gevolg
+
+- Geen `ModuleRegistry`.
+- Geen module toggles.
+- Geen vaste service routes.
+- SaaS Health controleert core en dynamische configuratie.

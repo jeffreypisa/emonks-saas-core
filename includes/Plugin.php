@@ -48,7 +48,6 @@ final class Plugin
     {
         $this->loadDependencies();
         add_action('init', [$this, 'loadTextDomain']);
-        add_action('emonks_register_modules', [$this, 'registerCoreModules']);
         TimberBridge::bootstrap();
         $this->registerServices();
 
@@ -59,16 +58,6 @@ final class Plugin
         }
 
         do_action('emonks_saas_core_booted', $this);
-    }
-
-    public function registerCoreModules(object $registry): void
-    {
-        if (! $registry instanceof ModuleRegistry) {
-            return;
-        }
-
-        $registry->register(new Modules\ClientPortal\ClientPortalModule());
-        $registry->register(new Modules\Guestbook\GuestbookModule());
     }
 
     public function loadTextDomain(): void
@@ -109,13 +98,7 @@ final class Plugin
             'Webhooks.php',
             'Catalog.php',
             'Services.php',
-            'ServiceModuleInterface.php',
-            'ModuleInterface.php',
-            'ModuleLifecycleInterface.php',
-            'ModuleRegistry.php',
-            'ModuleHealth.php',
-            'Modules/ClientPortal/ClientPortalModule.php',
-            'Modules/Guestbook/GuestbookModule.php',
+            'SaasHealth.php',
             'BillingProviderInterface.php',
             'StripeBillingProvider.php',
             'Features.php',
@@ -128,6 +111,7 @@ final class Plugin
             'Onboarding.php',
             'RestApi.php',
             'CustomDomains.php',
+            'Shortcodes.php',
         ];
 
         foreach ($files as $file) {
@@ -151,8 +135,7 @@ final class Plugin
             'migration_runner' => new MigrationRunner(),
             'memberships' => new Memberships(),
             'service_items' => new ServiceItems(),
-            'module_registry' => new ModuleRegistry(),
-            'module_health' => new ModuleHealth(),
+            'saas_health' => new SaasHealth(),
             'admin' => new Admin(),
             'auth' => new Auth(),
             'workspaces' => new Workspaces(),
@@ -168,6 +151,7 @@ final class Plugin
             'onboarding' => new Onboarding(),
             'rest_api' => new RestApi(),
             'custom_domains' => new CustomDomains(),
+            'shortcodes' => new Shortcodes(),
         ];
     }
 }
