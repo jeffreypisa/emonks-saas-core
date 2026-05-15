@@ -12,6 +12,9 @@ final class Emails
         add_action('emonks_workspace_updated', [$this, 'onWorkspaceUpdated'], 10, 2);
         add_action('emonks_billing_plan_changed', [$this, 'onBillingPlanChanged'], 10, 5);
         add_action('emonks_auth_login_failed', [$this, 'onLoginFailed'], 10, 2);
+        add_action('emonks_auth_registration_verify_email_required', [$this, 'onVerifyEmailRequired'], 10, 2);
+        add_action('emonks_auth_registration_admin_approval_required', [$this, 'onAdminApprovalRequired'], 10, 1);
+        add_action('emonks_auth_admin_approval_result', [$this, 'onAdminApprovalResult'], 10, 2);
     }
 
     public function onAccountRegistered(int $userId): void
@@ -60,6 +63,29 @@ final class Emails
         ]);
     }
 
+    public function onVerifyEmailRequired(int $userId, string $token = ''): void
+    {
+        $verifyUrl = $token !== '' ? emonks_get_verify_email_url($token) : '';
+        $this->sendTemplate('auth_verify_email', [
+            'user_id' => $userId,
+            'verify_token' => $token,
+            'verify_url' => $verifyUrl,
+        ]);
+    }
+
+    public function onAdminApprovalRequired(int $userId): void
+    {
+        $this->sendTemplate('auth_admin_approval_requested', ['user_id' => $userId]);
+    }
+
+    public function onAdminApprovalResult(int $userId, string $decision): void
+    {
+        $this->sendTemplate('auth_admin_approval_result', [
+            'user_id' => $userId,
+            'decision' => sanitize_key($decision),
+        ]);
+    }
+
     /** @param array<string,mixed> $eventContext */
     private function sendTemplate(string $templateKey, array $eventContext = []): bool
     {
@@ -78,6 +104,17 @@ final class Emails
         $subject = (string) apply_filters('emonks_email_subject', $subject, $templateKey, $eventContext, (int) ($eventContext['user_id'] ?? 0));
         $bodyHtml = (string) apply_filters('emonks_email_message_html', $bodyHtml, $templateKey, $eventContext, (int) ($eventContext['user_id'] ?? 0));
         $bodyText = (string) apply_filters('emonks_email_message', $bodyText, $templateKey, $eventContext, (int) ($eventContext['user_id'] ?? 0));
+
+        // Apply global layout as the last rendering step so downstream filters cannot strip it away.
+        $layout = emonks_get_email_layout_settings();
+        $bodyHtmlForLayout = $bodyHtml;
+        if (trim($bodyHtmlForLayout) === '' && trim($bodyText) !== '') {
+            $bodyHtmlForLayout = nl2br(esc_html($bodyText));
+        }
+        $layoutHtml = emonks_replace_email_tokens((string) ($layout['html_template'] ?? ''), $context);
+        $layoutText = emonks_replace_email_tokens((string) ($layout['text_template'] ?? ''), $context);
+        $bodyHtml = $this->applyLayoutTemplate($layoutHtml, $bodyHtmlForLayout);
+        $bodyText = $this->applyLayoutTemplate($layoutText, $bodyText);
 
         $recipients = $this->resolveRecipients($resolved, $eventContext, $context);
         if (empty($recipients)) {
@@ -178,5 +215,25 @@ final class Emails
     {
         $context['user_id'] = $userId;
         return $this->sendTemplate($template, $context);
+    }
+
+    private function applyLayoutTemplate(string $layoutTemplate, string $content): string
+    {
+        $layoutTemplate = trim($layoutTemplate);
+        if ($layoutTemplate === '') {
+            return $content;
+        }
+
+        $result = str_replace(
+            ['[email_content]', '{{ content_html }}', '{{ content_text }}'],
+            [$content, $content, $content],
+            $layoutTemplate
+        );
+
+        if (str_contains($result, '[email_content]') || str_contains($result, '{{ content_html }}') || str_contains($result, '{{ content_text }}')) {
+            return $content;
+        }
+
+        return $result;
     }
 }

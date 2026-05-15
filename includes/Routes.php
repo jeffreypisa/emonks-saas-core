@@ -14,10 +14,32 @@ namespace Emonks\SaasCore;
 
 final class Routes
 {
+    private const PAGE_ASSIGNABLE_ROUTE_KEYS = [
+        'account',
+        'workspaces',
+        'billing',
+        'settings',
+        'onboarding',
+        'login',
+        'register',
+        'logout',
+    ];
+
     /** @return array<string,string> */
     public static function defaultRoutes(): array
     {
-        $defaults = [
+        $defaults = self::baseRoutes();
+        foreach (self::PAGE_ASSIGNABLE_ROUTE_KEYS as $routeKey) {
+            $defaults[$routeKey] = self::resolveAssignedRouteSlug($routeKey, (string) ($defaults[$routeKey] ?? ''));
+        }
+
+        return apply_filters('emonks_saas_routes', $defaults);
+    }
+
+    /** @return array<string,string> */
+    private static function baseRoutes(): array
+    {
+        return [
             'account' => 'account',
             'workspaces' => 'workspaces',
             'billing' => 'billing',
@@ -26,10 +48,25 @@ final class Routes
             'login' => 'login',
             'register' => 'register',
             'logout' => 'logout',
+            'verify_email' => 'verify-email',
             'public' => 'g',
         ];
+    }
 
-        return apply_filters('emonks_saas_routes', $defaults);
+    private static function resolveAssignedRouteSlug(string $routeKey, string $fallback): string
+    {
+        $assignedPageId = absint((string) emonks_get_setting('pages.' . $routeKey . '.page_id', 0));
+        if ($assignedPageId <= 0) {
+            return $fallback;
+        }
+
+        $page = get_post($assignedPageId);
+        if (! $page instanceof \WP_Post || $page->post_type !== 'page' || $page->post_status !== 'publish') {
+            return $fallback;
+        }
+
+        $slug = sanitize_title((string) $page->post_name);
+        return $slug !== '' ? $slug : $fallback;
     }
 
     public function boot(): void
@@ -69,6 +106,7 @@ final class Routes
         add_rewrite_rule('^' . $r['login'] . '/?$', 'index.php?emonks_route=auth_login', 'top');
         add_rewrite_rule('^' . $r['register'] . '/?$', 'index.php?emonks_route=auth_register', 'top');
         add_rewrite_rule('^' . $r['logout'] . '/?$', 'index.php?emonks_route=auth_logout', 'top');
+        add_rewrite_rule('^' . $r['verify_email'] . '/?$', 'index.php?emonks_route=auth_verify_email', 'top');
         add_rewrite_rule('^' . $r['public'] . '/([^/]+)/?$', 'index.php?emonks_route=public_workspace&emonks_public_slug=$matches[1]', 'top');
     }
 
@@ -104,6 +142,9 @@ final class Routes
                 break;
             case 'auth_logout':
                 $auth->handleLogoutRoute();
+                break;
+            case 'auth_verify_email':
+                $auth->handleVerifyEmailRoute();
                 break;
             case 'public_workspace':
                 $dashboard->renderPublicWorkspace();

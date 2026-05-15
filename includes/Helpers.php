@@ -113,6 +113,163 @@ function emonks_get_login_url(): string
     return home_url('/' . $routes['login'] . '/');
 }
 
+function emonks_get_verify_email_url(string $token = ''): string
+{
+    $routes = emonks_get_routes();
+    $base = home_url('/' . ($routes['verify_email'] ?? 'verify-email') . '/');
+    if ($token === '') {
+        return $base;
+    }
+    return add_query_arg('token', rawurlencode($token), $base);
+}
+
+/** @return array<string,mixed> */
+function emonks_get_auth_settings(): array
+{
+    $status = sanitize_key((string) emonks_get_setting('auth.registration.status', 'auto_approve'));
+    if (! in_array($status, ['auto_approve', 'email_verification', 'admin_approval'], true)) {
+        $status = 'auto_approve';
+    }
+
+    $maxAttempts = absint((string) emonks_get_setting('auth.login.rate_limit.max_attempts', 5));
+    $lockoutMinutes = absint((string) emonks_get_setting('auth.login.rate_limit.lockout_minutes', 15));
+    $minLength = absint((string) emonks_get_setting('auth.password.min_length', 8));
+
+    $requiredFieldsRaw = emonks_get_setting('auth.register.required_fields', ['email', 'password']);
+    $requiredFields = [];
+    if (is_array($requiredFieldsRaw)) {
+        foreach ($requiredFieldsRaw as $field) {
+            $key = sanitize_key((string) $field);
+            if ($key !== '') {
+                $requiredFields[] = $key;
+            }
+        }
+    }
+    if (empty($requiredFields)) {
+        $requiredFields = ['email', 'password'];
+    }
+
+    return [
+        'registration' => [
+            'status' => $status,
+        ],
+        'login' => [
+            'wp_admin_block_customers' => (bool) emonks_get_setting('auth.login.wp_admin_block_customers', true),
+            'rate_limit' => [
+                'max_attempts' => max(1, min(20, $maxAttempts)),
+                'lockout_minutes' => max(1, min(240, $lockoutMinutes)),
+            ],
+        ],
+        'password' => [
+            'min_length' => max(6, min(64, $minLength)),
+            'require_uppercase' => (bool) emonks_get_setting('auth.password.require_uppercase', false),
+            'require_number' => (bool) emonks_get_setting('auth.password.require_number', false),
+            'require_symbol' => (bool) emonks_get_setting('auth.password.require_symbol', false),
+        ],
+        'register' => [
+            'required_fields' => array_values(array_unique($requiredFields)),
+        ],
+    ];
+}
+
+function emonks_get_redirect_url(string $event, ?int $userId = null): string
+{
+    $event = sanitize_key($event);
+    $userId = $userId ?: get_current_user_id();
+
+    $fallback = match ($event) {
+        'after_register' => emonks_get_account_url('onboarding'),
+        'after_login' => emonks_get_account_url(),
+        'after_logout' => home_url('/'),
+        default => home_url('/'),
+    };
+
+    if ($event === '') {
+        return $fallback;
+    }
+
+    if ($event === 'after_login') {
+        $wpUser = $userId > 0 ? get_userdata($userId) : null;
+        if ($wpUser instanceof \WP_User) {
+            $roleMap = emonks_get_setting('redirects.after_login.by_role', []);
+            if (is_array($roleMap)) {
+                foreach ((array) $wpUser->roles as $role) {
+                    $roleKey = sanitize_key((string) $role);
+                    $candidate = is_string($roleMap[$roleKey] ?? null) ? trim((string) $roleMap[$roleKey]) : '';
+                    if ($candidate !== '') {
+                        return emonks_normalize_redirect_target($candidate, $fallback);
+                    }
+                }
+            }
+        }
+    }
+
+    $type = sanitize_key((string) emonks_get_setting('redirects.' . $event . '.type', 'default'));
+    $target = trim((string) emonks_get_setting('redirects.' . $event . '.target', ''));
+    if (! in_array($type, ['default', 'route', 'page', 'custom_url'], true)) {
+        $type = 'default';
+    }
+
+    if ($type === 'default') {
+        return $fallback;
+    }
+
+    if ($type === 'route') {
+        if ($target === '') {
+            return $fallback;
+        }
+        return home_url('/' . ltrim($target, '/') . '/');
+    }
+
+    if ($type === 'page') {
+        $pageId = absint($target);
+        if ($pageId > 0) {
+            $url = get_permalink($pageId);
+            if (is_string($url) && $url !== '') {
+                return $url;
+            }
+        }
+        return $fallback;
+    }
+
+    return emonks_normalize_redirect_target($target, $fallback);
+}
+
+function emonks_normalize_redirect_target(string $target, string $fallback): string
+{
+    $target = trim($target);
+    if ($target === '') {
+        return $fallback;
+    }
+
+    if (str_starts_with($target, '/')) {
+        return home_url($target);
+    }
+
+    $safe = wp_validate_redirect($target, '');
+    return $safe !== '' ? $safe : $fallback;
+}
+
+/** @return array<string,mixed> */
+function emonks_get_lifecycle_settings(): array
+{
+    $action = sanitize_key((string) emonks_get_setting('lifecycle.account_delete.action', 'soft_delete'));
+    if (! in_array($action, ['soft_delete', 'hard_delete'], true)) {
+        $action = 'soft_delete';
+    }
+
+    $grace = absint((string) emonks_get_setting('lifecycle.account_delete.grace_days', 14));
+    $retention = absint((string) emonks_get_setting('lifecycle.account_delete.retention_days', 30));
+
+    return [
+        'account_delete' => [
+            'action' => $action,
+            'grace_days' => max(0, min(365, $grace)),
+            'retention_days' => max(0, min(3650, $retention)),
+        ],
+    ];
+}
+
 function emonks_default_context(): array
 {
     $userId = get_current_user_id();
@@ -346,6 +503,51 @@ function emonks_default_email_templates(): array
                 'conditions' => [],
                 'updated_at' => $today,
             ],
+            'auth_verify_email' => [
+                'key' => 'auth_verify_email',
+                'label' => 'E-mail verificatie',
+                'enabled' => true,
+                'trigger' => 'emonks_auth_registration_verify_email_required',
+                'recipients' => ['targets' => ['current_user'], 'extra' => []],
+                'subject' => 'Bevestig je e-mail voor {{ system.site_name }}',
+                'body_html' => '<p>Welkom! Bevestig je e-mail via <a href="{{ auth.verify_url }}">deze link</a>.</p>',
+                'body_text' => 'Bevestig je e-mail: {{ auth.verify_url }}',
+                'from_name' => '',
+                'from_email' => '',
+                'reply_to' => '',
+                'conditions' => [],
+                'updated_at' => $today,
+            ],
+            'auth_admin_approval_requested' => [
+                'key' => 'auth_admin_approval_requested',
+                'label' => 'Admin approval gevraagd',
+                'enabled' => true,
+                'trigger' => 'emonks_auth_registration_admin_approval_required',
+                'recipients' => ['targets' => ['site_admin'], 'extra' => []],
+                'subject' => 'Nieuwe gebruiker wacht op goedkeuring',
+                'body_html' => '<p>Gebruiker {{ user.email }} wacht op goedkeuring.</p>',
+                'body_text' => 'Gebruiker {{ user.email }} wacht op goedkeuring.',
+                'from_name' => '',
+                'from_email' => '',
+                'reply_to' => '',
+                'conditions' => [],
+                'updated_at' => $today,
+            ],
+            'auth_admin_approval_result' => [
+                'key' => 'auth_admin_approval_result',
+                'label' => 'Admin approval resultaat',
+                'enabled' => true,
+                'trigger' => 'emonks_auth_admin_approval_result',
+                'recipients' => ['targets' => ['current_user'], 'extra' => []],
+                'subject' => 'Status van je account is bijgewerkt',
+                'body_html' => '<p>Je accountstatus is bijgewerkt. Beslissing: {{ auth.decision }}</p>',
+                'body_text' => 'Je accountstatus is bijgewerkt. Beslissing: {{ auth.decision }}',
+                'from_name' => '',
+                'from_email' => '',
+                'reply_to' => '',
+                'conditions' => [],
+                'updated_at' => $today,
+            ],
         ],
     ];
 }
@@ -359,7 +561,33 @@ function emonks_get_email_templates(): array
         return $defaults;
     }
 
-    return ['schema_version' => (int) ($raw['schema_version'] ?? 1), 'templates' => $raw['templates']];
+    $templates = is_array($defaults['templates'] ?? null) ? $defaults['templates'] : [];
+    foreach ((array) $raw['templates'] as $key => $template) {
+        if (is_array($template)) {
+            $templates[sanitize_key((string) $key)] = $template;
+        }
+    }
+
+    return ['schema_version' => (int) ($raw['schema_version'] ?? 1), 'templates' => $templates];
+}
+
+/** @return array<string,string> */
+function emonks_get_email_layout_settings(): array
+{
+    $html = (string) emonks_get_setting('email_layout.html_template', '');
+    $text = (string) emonks_get_setting('email_layout.text_template', '');
+
+    if (trim($html) === '') {
+        $html = '<div style="background:#f3f4f6;padding:28px;font-family:Arial,sans-serif;"><div style="max-width:680px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;"><div style="background:#0f172a;color:#ffffff;padding:16px 20px;font-size:14px;letter-spacing:.03em;text-transform:uppercase;">{{ system.site_name }}</div><div style="padding:22px;color:#111827;line-height:1.7;">[email_content]</div><div style="padding:14px 20px;background:#f9fafb;color:#6b7280;font-size:12px;">Automatisch bericht van {{ system.site_name }}</div></div></div>';
+    }
+    if (trim($text) === '') {
+        $text = "{{ system.site_name }}\n====================\n\n[email_content]\n\nAutomatisch bericht van {{ system.site_name }}\n";
+    }
+
+    return [
+        'html_template' => $html,
+        'text_template' => $text,
+    ];
 }
 
 /** @return array<string,mixed> */
@@ -413,6 +641,11 @@ function emonks_build_email_token_context(array $eventContext = []): array
     $workspace = $workspaceId > 0 ? get_post($workspaceId) : null;
     $accountId = absint((string) ($eventContext['account_id'] ?? ($workspaceId > 0 ? emonks_get_workspace_meta($workspaceId, 'account_id', 0) : 0)));
     $account = $accountId > 0 ? get_post($accountId) : null;
+    $verifyUrl = sanitize_text_field((string) ($eventContext['verify_url'] ?? ''));
+    if ($verifyUrl === '' && ! empty($eventContext['verify_token'])) {
+        $verifyUrl = emonks_get_verify_email_url((string) $eventContext['verify_token']);
+    }
+    $approvalDecision = sanitize_key((string) ($eventContext['decision'] ?? ''));
 
     return [
         'user' => [
@@ -443,6 +676,10 @@ function emonks_build_email_token_context(array $eventContext = []): array
             'site_name' => (string) get_bloginfo('name'),
             'site_url' => (string) home_url('/'),
             'today' => (string) wp_date('Y-m-d'),
+        ],
+        'auth' => [
+            'verify_url' => $verifyUrl,
+            'decision' => $approvalDecision,
         ],
     ];
 }
@@ -498,6 +735,8 @@ function emonks_email_token_catalog(): array
         'system.site_name' => 'Site naam',
         'system.site_url' => 'Site URL',
         'system.today' => 'Datum (Y-m-d)',
+        'auth.verify_url' => 'Email verificatie URL',
+        'auth.decision' => 'Admin approval beslissing',
     ];
 }
 

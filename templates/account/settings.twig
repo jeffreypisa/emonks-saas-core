@@ -9,14 +9,21 @@
 <div class="container py-4 py-lg-5">
   <div class="row g-4">
     <div class="col-12 col-lg-8">
-      <div class="card border-0 shadow-sm">
-        <div class="card-body p-4">
-          <h1 class="h4 mb-3">Account instellingen</h1>
-          <p class="text-muted">Deze pagina is voorbereid voor profielinstellingen, notificaties, branding en API preferences vanuit theme-uitbreidingen.</p>
-          <div class="alert alert-light border mb-0">Tip: gebruik settings uit de plugin-context en bewaar UI-specifieke velden in je theme of service module.</div>
+        <div class="card border-0 shadow-sm">
+          <div class="card-body p-4">
+            <h1 class="h4 mb-3">Account instellingen</h1>
+            <p class="text-muted">Deze pagina is voorbereid voor profielinstellingen, notificaties, branding en API preferences vanuit theme-uitbreidingen.</p>
+            <div class="alert alert-light border mb-0">Tip: gebruik settings uit de plugin-context en bewaar UI-specifieke velden in je theme of service module.</div>
+            <hr class="my-4">
+            <h2 class="h6 text-danger">Account verwijderen</h2>
+            <p class="text-muted small">Deze actie start het account-verwijderproces volgens de ingestelde lifecycle policy.</p>
+            <form method="post" action="{{ admin_post.account_delete_request }}" onsubmit="return confirm('Weet je zeker dat je je account wilt verwijderen?');">
+              {{ function('wp_nonce_field', 'emonks_account_delete_request', 'emonks_nonce') }}
+              <button type="submit" class="btn btn-outline-danger">Account verwijderen</button>
+            </form>
+          </div>
         </div>
       </div>
-    </div>
     <div class="col-12 col-lg-4">
       <div class="card border-0 shadow-sm">
         <div class="card-body p-4">

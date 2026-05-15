@@ -52,6 +52,7 @@ final class Dashboard
             'billing_checkout' => emonks_admin_post_url('emonks_billing_checkout'),
             'billing_portal' => emonks_admin_post_url('emonks_billing_portal'),
             'billing_change_plan' => emonks_admin_post_url('emonks_billing_change_plan'),
+            'account_delete_request' => emonks_admin_post_url('emonks_account_delete_request'),
         ];
 
         $template = match ($route) {

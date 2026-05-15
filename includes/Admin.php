@@ -9,6 +9,7 @@ final class Admin
     {
         add_action('admin_menu', [$this, 'registerMenu']);
         add_action('admin_post_emonks_saas_save_settings', [$this, 'saveSettings']);
+        add_action('admin_post_emonks_saas_approval_action', [$this, 'handleApprovalAction']);
         add_action('admin_enqueue_scripts', [$this, 'enqueueAdminAssets']);
     }
 
@@ -26,6 +27,7 @@ final class Admin
         add_submenu_page('emonks-saas-core', 'Workspaces', 'Workspaces', 'manage_options', 'edit.php?post_type=emonks_workspace');
         add_submenu_page('emonks-saas-core', 'SaaS Health', 'SaaS Health', 'manage_options', 'emonks-saas-health', [$this, 'renderSaasHealthPage']);
         add_submenu_page('emonks-saas-core', 'Logs', 'Logs', 'manage_options', 'emonks-saas-logs', [$this, 'renderLogsPage']);
+        add_submenu_page('emonks-saas-core', 'Pending Users', 'Pending Users', 'manage_options', 'emonks-saas-pending-users', [$this, 'renderPendingUsersPage']);
         add_submenu_page('emonks-saas-core', 'Docs & Support', 'Docs & Support', 'manage_options', 'emonks-saas-docs', [$this, 'renderDocsPage']);
         add_submenu_page('emonks-saas-core', 'Settings', 'Settings', 'manage_options', 'emonks-saas-settings', [$this, 'renderSettingsPage']);
     }
@@ -196,7 +198,7 @@ final class Admin
             exit;
         }
 
-        if (! in_array($tab, ['general', 'shortcodes', 'user_menu'], true)) {
+        if (! in_array($tab, ['general', 'pages', 'auth', 'redirects', 'lifecycle', 'shortcodes', 'user_menu'], true)) {
             $tab = 'general';
         }
 
@@ -205,6 +207,10 @@ final class Admin
         echo '<h2 class="nav-tab-wrapper" style="margin-bottom:14px;">';
         foreach ([
             'general' => 'Algemeen',
+            'pages' => 'Pages',
+            'auth' => 'Auth',
+            'redirects' => 'Redirects',
+            'lifecycle' => 'Lifecycle',
             'shortcodes' => 'Shortcodes',
             'user_menu' => 'Profielmenu',
         ] as $key => $label) {
@@ -215,6 +221,30 @@ final class Admin
 
         if ($tab === 'shortcodes') {
             $this->renderShortcodesPanel();
+            echo '</div>';
+            return;
+        }
+
+        if ($tab === 'pages') {
+            $this->renderPagesPanel();
+            echo '</div>';
+            return;
+        }
+
+        if ($tab === 'auth') {
+            $this->renderAuthPanel();
+            echo '</div>';
+            return;
+        }
+
+        if ($tab === 'redirects') {
+            $this->renderRedirectsPanel();
+            echo '</div>';
+            return;
+        }
+
+        if ($tab === 'lifecycle') {
+            $this->renderLifecyclePanel();
             echo '</div>';
             return;
         }
@@ -335,6 +365,136 @@ final class Admin
         echo '</select></p>';
         submit_button('Voeg profielmenu toe');
         echo '</form>';
+    }
+
+    private function renderPagesPanel(): void
+    {
+        $routes = [
+            'account' => 'Account page',
+            'workspaces' => 'Workspaces page',
+            'billing' => 'Billing page',
+            'settings' => 'Settings page',
+            'onboarding' => 'Onboarding page',
+            'login' => 'Login page',
+            'register' => 'Register page',
+            'logout' => 'Logout page',
+        ];
+
+        echo '<p class="description">Koppel specifieke WordPress-pagina\'s aan core routes. Bij een koppeling gebruikt de plugin de slug van die pagina als route. Leeg laten = standaard route.</p>';
+
+        if (! empty($_GET['pages_updated'])) {
+            echo '<div class="notice notice-warning inline"><p><strong>Let op:</strong> page routes zijn bijgewerkt. Als URL\'s nog niet direct werken, sla dan één keer permalinks opnieuw op via <em>Instellingen > Permalinks</em>.</p></div>';
+        }
+        if ((bool) emonks_get_setting('pages.conflict_guard.enabled', true)) {
+            $conflicts = $this->detectPageAssignmentConflicts();
+            if (! empty($conflicts)) {
+                echo '<div class="notice notice-error inline"><p><strong>Route conflict guard:</strong> ' . esc_html(implode(' | ', $conflicts)) . '</p></div>';
+            }
+        }
+
+        $this->renderSettingsFormStart('pages');
+        echo '<table class="form-table emonks-form-table">';
+        foreach ($routes as $routeKey => $label) {
+            $selected = absint((string) emonks_get_setting('pages.' . $routeKey . '.page_id', 0));
+            echo '<tr><th scope="row"><label for="emonks_pages_' . esc_attr($routeKey) . '">' . esc_html($label) . '</label></th><td>';
+            wp_dropdown_pages([
+                'name' => 'settings[pages][' . $routeKey . '][page_id]',
+                'id' => 'emonks_pages_' . $routeKey,
+                'show_option_none' => 'Standaard route gebruiken',
+                'option_none_value' => '0',
+                'selected' => $selected,
+                'post_status' => ['publish'],
+            ]);
+            echo '<span class="description">Route key: <code>' . esc_html($routeKey) . '</code></span>';
+            echo '</td></tr>';
+        }
+        echo '</table>';
+        submit_button('Pages opslaan');
+        $this->renderSettingsFormEnd();
+    }
+
+    private function renderAuthPanel(): void
+    {
+        $auth = emonks_get_auth_settings();
+        $requiredFields = (array) ($auth['register']['required_fields'] ?? ['email', 'password']);
+
+        echo '<p class="description">Beheer registratiegedrag, login-hardening en wachtwoordbeleid.</p>';
+        $this->renderSettingsFormStart('auth');
+        echo '<table class="form-table emonks-form-table">';
+        echo '<tr><th scope="row">Registration status</th><td><select name="settings[auth][registration][status]">';
+        echo '<option value="auto_approve" ' . selected((string) ($auth['registration']['status'] ?? 'auto_approve'), 'auto_approve', false) . '>Auto approve</option>';
+        echo '<option value="email_verification" ' . selected((string) ($auth['registration']['status'] ?? 'auto_approve'), 'email_verification', false) . '>Email verification</option>';
+        echo '<option value="admin_approval" ' . selected((string) ($auth['registration']['status'] ?? 'auto_approve'), 'admin_approval', false) . '>Admin approval</option>';
+        echo '</select><span class="description">Bij email/admin approval wordt gebruiker niet automatisch ingelogd.</span></td></tr>';
+        echo '<tr><th scope="row">Blokkeer wp-admin voor klanten</th><td><label><input type="checkbox" name="settings[auth][login][wp_admin_block_customers]" value="1" ' . checked(! empty($auth['login']['wp_admin_block_customers']), true, false) . ' /> Ja, stuur emonks_customer gebruikers naar account.</label></td></tr>';
+        echo '<tr><th scope="row">Rate limit: max attempts</th><td><input type="number" min="1" max="20" name="settings[auth][login][rate_limit][max_attempts]" value="' . esc_attr((string) ($auth['login']['rate_limit']['max_attempts'] ?? 5)) . '" /></td></tr>';
+        echo '<tr><th scope="row">Rate limit: lockout (minuten)</th><td><input type="number" min="1" max="240" name="settings[auth][login][rate_limit][lockout_minutes]" value="' . esc_attr((string) ($auth['login']['rate_limit']['lockout_minutes'] ?? 15)) . '" /></td></tr>';
+        echo '<tr><th scope="row">Wachtwoord minimum lengte</th><td><input type="number" min="6" max="64" name="settings[auth][password][min_length]" value="' . esc_attr((string) ($auth['password']['min_length'] ?? 8)) . '" /></td></tr>';
+        echo '<tr><th scope="row">Wachtwoord regels</th><td>';
+        echo '<label style="display:block;margin:3px 0;"><input type="checkbox" name="settings[auth][password][require_uppercase]" value="1" ' . checked(! empty($auth['password']['require_uppercase']), true, false) . ' /> Vereis hoofdletter</label>';
+        echo '<label style="display:block;margin:3px 0;"><input type="checkbox" name="settings[auth][password][require_number]" value="1" ' . checked(! empty($auth['password']['require_number']), true, false) . ' /> Vereis cijfer</label>';
+        echo '<label style="display:block;margin:3px 0;"><input type="checkbox" name="settings[auth][password][require_symbol]" value="1" ' . checked(! empty($auth['password']['require_symbol']), true, false) . ' /> Vereis speciaal teken</label>';
+        echo '</td></tr>';
+        echo '<tr><th scope="row">Verplichte registervelden</th><td>';
+        foreach (['email', 'password', 'first_name', 'company', 'phone'] as $fieldKey) {
+            echo '<label style="display:block;margin:3px 0;"><input type="checkbox" name="settings[auth][register][required_fields][]" value="' . esc_attr($fieldKey) . '" ' . checked(in_array($fieldKey, $requiredFields, true), true, false) . ' /> ' . esc_html($fieldKey) . '</label>';
+        }
+        echo '</td></tr>';
+        echo '</table>';
+        submit_button('Auth instellingen opslaan');
+        $this->renderSettingsFormEnd();
+    }
+
+    private function renderRedirectsPanel(): void
+    {
+        $settings = get_option(Settings::OPTION_KEY, []);
+        $redirects = is_array($settings['redirects'] ?? null) ? $settings['redirects'] : [];
+
+        echo '<p class="description">Bepaal bestemming na register, login en logout.</p>';
+        $this->renderSettingsFormStart('redirects');
+        echo '<table class="form-table emonks-form-table">';
+        foreach ([
+            'after_register' => 'Na registratie',
+            'after_login' => 'Na login',
+            'after_logout' => 'Na logout',
+        ] as $eventKey => $label) {
+            $type = sanitize_key((string) ($redirects[$eventKey]['type'] ?? 'default'));
+            $target = (string) ($redirects[$eventKey]['target'] ?? '');
+            echo '<tr><th scope="row">' . esc_html($label) . ' type</th><td><select name="settings[redirects][' . esc_attr($eventKey) . '][type]">';
+            foreach (['default' => 'Default', 'route' => 'Route path', 'page' => 'WordPress page', 'custom_url' => 'Custom URL'] as $value => $text) {
+                echo '<option value="' . esc_attr($value) . '" ' . selected($type, $value, false) . '>' . esc_html($text) . '</option>';
+            }
+            echo '</select></td></tr>';
+            echo '<tr><th scope="row">' . esc_html($label) . ' target</th><td><input class="regular-text" name="settings[redirects][' . esc_attr($eventKey) . '][target]" value="' . esc_attr($target) . '" /><span class="description">Voor route: bijv. account/onboarding, voor page: page ID, voor custom URL: volledig URL of /pad.</span></td></tr>';
+        }
+        $roleTarget = sanitize_text_field((string) ($redirects['after_login']['by_role']['emonks_customer'] ?? ''));
+        echo '<tr><th scope="row">Login redirect per rol</th><td><label>emonks_customer <input class="regular-text" name="settings[redirects][after_login][by_role][emonks_customer]" value="' . esc_attr($roleTarget) . '" /></label><span class="description">Overschrijft algemene login redirect als gevuld.</span></td></tr>';
+        echo '</table>';
+        submit_button('Redirect instellingen opslaan');
+        $this->renderSettingsFormEnd();
+    }
+
+    private function renderLifecyclePanel(): void
+    {
+        $lifecycle = emonks_get_lifecycle_settings();
+        $action = (string) ($lifecycle['account_delete']['action'] ?? 'soft_delete');
+        $graceDays = (int) ($lifecycle['account_delete']['grace_days'] ?? 14);
+        $retentionDays = (int) ($lifecycle['account_delete']['retention_days'] ?? 30);
+        $guardEnabled = (bool) emonks_get_setting('pages.conflict_guard.enabled', true);
+
+        echo '<p class="description">Lifecycle policies voor account verwijdering en routing safety.</p>';
+        $this->renderSettingsFormStart('lifecycle');
+        echo '<table class="form-table emonks-form-table">';
+        echo '<tr><th scope="row">Account delete action</th><td><select name="settings[lifecycle][account_delete][action]">';
+        echo '<option value="soft_delete" ' . selected($action, 'soft_delete', false) . '>Soft delete</option>';
+        echo '<option value="hard_delete" ' . selected($action, 'hard_delete', false) . '>Hard delete</option>';
+        echo '</select><span class="description">Hard delete verwijdert data direct en is risicovol.</span></td></tr>';
+        echo '<tr><th scope="row">Grace period (dagen)</th><td><input type="number" min="0" max="365" name="settings[lifecycle][account_delete][grace_days]" value="' . esc_attr((string) $graceDays) . '" /></td></tr>';
+        echo '<tr><th scope="row">Retentie (dagen)</th><td><input type="number" min="0" max="3650" name="settings[lifecycle][account_delete][retention_days]" value="' . esc_attr((string) $retentionDays) . '" /></td></tr>';
+        echo '<tr><th scope="row">Route conflict guard</th><td><label><input type="checkbox" name="settings[pages][conflict_guard][enabled]" value="1" ' . checked($guardEnabled, true, false) . ' /> Waarschuw bij dubbele page/slug mappings.</label></td></tr>';
+        echo '</table>';
+        submit_button('Lifecycle instellingen opslaan');
+        $this->renderSettingsFormEnd();
     }
 
     public function renderBillingPage(): void
@@ -609,6 +769,8 @@ final class Admin
             ['docs/forms.md', 'Form templates en rendercontext.'],
             ['docs/billing.md', 'Billingflows, provider model, test mode en webhooks.'],
             ['docs/routes.md', 'Account, auth en public routes.'],
+            ['docs/page-assignments.md', 'Page-to-route koppelingen voor core pagina\'s.'],
+            ['docs/auth-redirects-lifecycle-settings.md', 'Auth, redirects en lifecycle settings.'],
             ['docs/rest-api.md', 'REST API endpoints.'],
             ['docs/theme-overrides.md', 'Labels, routes en template overrides in het theme.'],
             ['docs/template-overrides.md', 'Template resolution en Twig context.'],
@@ -1019,6 +1181,11 @@ HTML;
 
     public function renderEmailsPage(): void
     {
+        $emailsTab = sanitize_key((string) ($_GET['emails_tab'] ?? 'emails'));
+        if (! in_array($emailsTab, ['emails', 'template'], true)) {
+            $emailsTab = 'emails';
+        }
+
         $templates = emonks_get_email_templates()['templates'] ?? [];
         $activeKey = sanitize_key((string) ($_GET['email'] ?? ''));
         if ($activeKey === '' && ! empty($templates)) {
@@ -1028,6 +1195,17 @@ HTML;
 
         echo '<div class="wrap">';
         $this->renderPageHeader('Emonks SaaS - Emails', 'Dynamische mailflows per actie met slimme velden.', 'Koppel e-mails aan events en gebruik tokens zoals {{ user.email }} in onderwerp en inhoud.');
+        echo '<h2 class="nav-tab-wrapper" style="margin-bottom:14px;">';
+        echo '<a class="nav-tab ' . ($emailsTab === 'emails' ? 'nav-tab-active' : '') . '" href="' . esc_url(admin_url('admin.php?page=emonks-saas-emails&emails_tab=emails')) . '">Emails</a>';
+        echo '<a class="nav-tab ' . ($emailsTab === 'template' ? 'nav-tab-active' : '') . '" href="' . esc_url(admin_url('admin.php?page=emonks-saas-emails&emails_tab=template')) . '">Template</a>';
+        echo '</h2>';
+
+        if ($emailsTab === 'template') {
+            $this->renderEmailLayoutPanel();
+            echo '</div>';
+            return;
+        }
+
         echo '<div class="emonks-services-shell">';
 
         echo '<div class="emonks-card emonks-services-sidebar">';
@@ -1067,10 +1245,6 @@ HTML;
         $this->renderSettingsFormStart('emails_builder');
         echo '<input type="hidden" name="emails_builder[action]" value="update" />';
         echo '<input type="hidden" name="emails_builder[email_key]" value="' . esc_attr($activeKey) . '" />';
-        echo '<h2 class="nav-tab-wrapper" style="margin-bottom:14px;">';
-        echo '<button type="button" class="nav-tab nav-tab-active" data-email-tab="visual">Visual</button>';
-        echo '<button type="button" class="nav-tab" data-email-tab="text">Text</button>';
-        echo '</h2>';
 
         echo '<div class="emonks-editor-section"><h3 class="emonks-editor-title">Basis</h3><div class="emonks-settings-grid">';
         echo '<p><label>Label<input type="text" name="emails_builder[email][label]" class="regular-text" value="' . esc_attr((string) ($activeTemplate['label'] ?? $activeKey)) . '" /></label></p>';
@@ -1093,19 +1267,16 @@ HTML;
         echo '<p><input type="text" name="emails_builder[email][subject]" class="large-text" value="' . esc_attr((string) ($activeTemplate['subject'] ?? '')) . '" /></p>';
         echo '</div>';
 
-        echo '<div class="emonks-tab-panel is-active" data-email-panel="visual">';
         echo '<div class="emonks-editor-section"><h3 class="emonks-editor-title">Visual (HTML)</h3>';
         wp_editor((string) ($activeTemplate['body_html'] ?? ''), 'emails_builder_body_html', [
             'textarea_name' => 'emails_builder[email][body_html]',
             'textarea_rows' => 12,
             'media_buttons' => false,
         ]);
-        echo '</div></div>';
-
-        echo '<div class="emonks-tab-panel" data-email-panel="text">';
+        echo '</div>';
         echo '<div class="emonks-editor-section"><h3 class="emonks-editor-title">Text</h3>';
         echo '<p><textarea name="emails_builder[email][body_text]" rows="12" class="large-text code">' . esc_textarea((string) ($activeTemplate['body_text'] ?? '')) . '</textarea></p>';
-        echo '</div></div>';
+        echo '</div>';
 
         echo '<div class="emonks-editor-section"><h3 class="emonks-editor-title">Geavanceerd</h3><div class="emonks-settings-grid">';
         echo '<p><label>From name<input type="text" name="emails_builder[email][from_name]" class="regular-text" value="' . esc_attr((string) ($activeTemplate['from_name'] ?? '')) . '" /></label></p>';
@@ -1138,7 +1309,34 @@ HTML;
         echo '</div>';
 
         echo '</div></div></div>';
-        echo '<script>document.addEventListener(\"DOMContentLoaded\",function(){document.querySelectorAll(\"[data-toggle-email-create]\").forEach(function(btn){btn.addEventListener(\"click\",function(){document.querySelectorAll(\"[data-email-create-form]\").forEach(function(p){p.classList.toggle(\"is-open\")})})});document.querySelectorAll(\"[data-email-tab]\").forEach(function(tab){tab.addEventListener(\"click\",function(){var t=tab.getAttribute(\"data-email-tab\");document.querySelectorAll(\"[data-email-tab]\").forEach(function(i){i.classList.remove(\"nav-tab-active\")});tab.classList.add(\"nav-tab-active\");document.querySelectorAll(\"[data-email-panel]\").forEach(function(p){p.classList.toggle(\"is-active\",p.getAttribute(\"data-email-panel\")===t)})})});});</script>';
+        echo '<script>document.addEventListener("DOMContentLoaded",function(){document.querySelectorAll("[data-toggle-email-create]").forEach(function(btn){btn.addEventListener("click",function(){document.querySelectorAll("[data-email-create-form]").forEach(function(p){p.classList.toggle("is-open")})})});});</script>';
+    }
+
+    private function renderEmailLayoutPanel(): void
+    {
+        $layout = emonks_get_email_layout_settings();
+        $htmlTemplate = (string) ($layout['html_template'] ?? '');
+
+        echo '<div class="emonks-card">';
+        echo '<h2 style="margin-top:0;">Globale E-mail Template</h2>';
+        echo '<p class="description">Deze wrapper wordt op alle e-mails toegepast. Gebruik <code>[email_content]</code> of <code>{{ content_html }}</code> / <code>{{ content_text }}</code> als placeholder voor template-inhoud.</p>';
+
+        $this->renderSettingsFormStart('emails_template');
+        echo '<div class="emonks-editor-section"><h3 class="emonks-editor-title">Layout</h3>';
+        echo '<p class="description">Gebruik Visueel voor eenvoudige opmaak en Tekst voor exacte HTML. De inhoud-placeholder blijft verplicht: <code>[email_content]</code>.</p>';
+        wp_editor($htmlTemplate, 'emonkslayouttemplate', [
+            'textarea_name' => 'email_layout_html_raw',
+            'textarea_rows' => 18,
+            'media_buttons' => true,
+            'quicktags' => true,
+            'tinymce' => true,
+        ]);
+        echo '<script>document.addEventListener("DOMContentLoaded",function(){var editor=document.getElementById("emonkslayouttemplate");if(!editor){return;}var form=editor.closest("form");if(!form){return;}form.addEventListener("submit",function(){if(window.tinyMCE&&typeof window.tinyMCE.triggerSave==="function"){window.tinyMCE.triggerSave();}});});</script>';
+        echo '</div>';
+
+        submit_button('E-mail template opslaan');
+        $this->renderSettingsFormEnd();
+        echo '</div>';
     }
 
     private function renderEmailCreateForm(): void
@@ -1350,6 +1548,107 @@ HTML;
         echo '</tbody></table></div>';
     }
 
+    public function renderPendingUsersPage(): void
+    {
+        if (! current_user_can('manage_options')) {
+            wp_die('Unauthorized', 403);
+        }
+
+        $statusNotice = sanitize_key((string) ($_GET['approval_status'] ?? ''));
+        $message = match ($statusNotice) {
+            'approved' => 'Gebruiker is goedgekeurd.',
+            'rejected' => 'Gebruiker is afgewezen.',
+            'noop' => 'Geen wijziging nodig.',
+            'error' => 'Actie kon niet worden uitgevoerd.',
+            default => '',
+        };
+
+        $pendingUsers = get_users([
+            'meta_key' => 'emonks_registration_status',
+            'meta_value' => 'pending',
+            'orderby' => 'registered',
+            'order' => 'ASC',
+        ]);
+
+        echo '<div class="wrap">';
+        $this->renderPageHeader('Emonks SaaS - Pending Users', 'Beheer gebruikers die wachten op activatie.', 'Approve activeert de gebruiker. Reject markeert als rejected en blokkeert login.');
+        if ($message !== '') {
+            echo '<div class="notice notice-info inline"><p>' . esc_html($message) . '</p></div>';
+        }
+
+        echo '<table class="widefat striped"><thead><tr><th>User</th><th>Email</th><th>Registered</th><th>Mode</th><th>Verified</th><th>Acties</th></tr></thead><tbody>';
+        if (empty($pendingUsers)) {
+            echo '<tr><td colspan="6">Geen pending users gevonden.</td></tr>';
+        } else {
+            foreach ($pendingUsers as $user) {
+                if (! $user instanceof \WP_User) {
+                    continue;
+                }
+                $userId = (int) $user->ID;
+                $mode = sanitize_key((string) get_user_meta($userId, 'emonks_registration_mode', true));
+                $verifiedAt = (string) get_user_meta($userId, 'emonks_registration_verified_at', true);
+                $approveUrl = wp_nonce_url(add_query_arg([
+                    'action' => 'emonks_saas_approval_action',
+                    'decision' => 'approve',
+                    'user_id' => $userId,
+                ], admin_url('admin-post.php')), 'emonks_saas_approval_action_' . $userId, 'emonks_nonce');
+                $rejectUrl = wp_nonce_url(add_query_arg([
+                    'action' => 'emonks_saas_approval_action',
+                    'decision' => 'reject',
+                    'user_id' => $userId,
+                ], admin_url('admin-post.php')), 'emonks_saas_approval_action_' . $userId, 'emonks_nonce');
+
+                echo '<tr>';
+                echo '<td>' . esc_html((string) $user->display_name) . '</td>';
+                echo '<td>' . esc_html((string) $user->user_email) . '</td>';
+                echo '<td>' . esc_html((string) $user->user_registered) . '</td>';
+                echo '<td><code>' . esc_html($mode !== '' ? $mode : 'unknown') . '</code></td>';
+                echo '<td>' . esc_html($verifiedAt !== '' ? $verifiedAt : 'no') . '</td>';
+                echo '<td><a class="button button-primary" href="' . esc_url($approveUrl) . '">Approve</a> ';
+                echo '<a class="button" href="' . esc_url($rejectUrl) . '">Reject</a></td>';
+                echo '</tr>';
+            }
+        }
+        echo '</tbody></table>';
+        echo '</div>';
+    }
+
+    public function handleApprovalAction(): void
+    {
+        if (! current_user_can('manage_options')) {
+            wp_die('Unauthorized', 403);
+        }
+
+        $userId = absint((string) ($_GET['user_id'] ?? 0));
+        $decision = sanitize_key((string) ($_GET['decision'] ?? ''));
+        check_admin_referer('emonks_saas_approval_action_' . $userId, 'emonks_nonce');
+
+        $status = 'error';
+        if ($userId > 0 && in_array($decision, ['approve', 'reject'], true)) {
+            $currentStatus = sanitize_key((string) get_user_meta($userId, 'emonks_registration_status', true));
+            if ($currentStatus !== 'pending') {
+                $status = 'noop';
+            } else {
+                if ($decision === 'approve') {
+                    update_user_meta($userId, 'emonks_registration_status', 'active');
+                    update_user_meta($userId, 'emonks_registration_approved_at', wp_date('c'));
+                    $status = 'approved';
+                } else {
+                    update_user_meta($userId, 'emonks_registration_status', 'rejected');
+                    update_user_meta($userId, 'emonks_registration_rejected_at', wp_date('c'));
+                    $status = 'rejected';
+                }
+                do_action('emonks_auth_admin_approval_result', $userId, $decision);
+            }
+        }
+
+        wp_safe_redirect(add_query_arg([
+            'page' => 'emonks-saas-pending-users',
+            'approval_status' => $status,
+        ], admin_url('admin.php')));
+        exit;
+    }
+
     public function saveSettings(): void
     {
         if (! current_user_can('manage_options')) {
@@ -1390,6 +1689,89 @@ HTML;
         } elseif ($tab === 'settings') {
             $current = array_replace_recursive($current, $sanitized);
             unset($current['modules'], $current['form_schemas']);
+        } elseif ($tab === 'pages') {
+            $incomingPages = is_array($sanitized['pages'] ?? null) ? $sanitized['pages'] : [];
+            $routeKeys = ['account', 'workspaces', 'billing', 'settings', 'onboarding', 'login', 'register', 'logout'];
+            $existingConflictGuard = (bool) emonks_get_setting('pages.conflict_guard.enabled', true);
+            $current['pages'] = [];
+            foreach ($routeKeys as $routeKey) {
+                $pageId = absint((string) ($incomingPages[$routeKey]['page_id'] ?? 0));
+                if ($pageId > 0) {
+                    $page = get_post($pageId);
+                    if (! $page instanceof \WP_Post || $page->post_type !== 'page' || $page->post_status !== 'publish') {
+                        $pageId = 0;
+                    }
+                }
+                $current['pages'][$routeKey] = ['page_id' => $pageId];
+            }
+            $current['pages']['conflict_guard'] = ['enabled' => $existingConflictGuard];
+
+            $redirectUrl = add_query_arg([
+                'page' => 'emonks-saas-settings',
+                'settings_tab' => 'pages',
+                'pages_updated' => '1',
+            ], admin_url('admin.php'));
+        } elseif ($tab === 'auth') {
+            $incoming = is_array($sanitized['auth'] ?? null) ? $sanitized['auth'] : [];
+            $status = sanitize_key((string) ($incoming['registration']['status'] ?? 'auto_approve'));
+            if (! in_array($status, ['auto_approve', 'email_verification', 'admin_approval'], true)) {
+                $status = 'auto_approve';
+            }
+            $requiredFields = is_array($incoming['register']['required_fields'] ?? null) ? $incoming['register']['required_fields'] : [];
+            $requiredFields = array_values(array_filter(array_map(static fn($item) => sanitize_key((string) $item), $requiredFields)));
+            if (empty($requiredFields)) {
+                $requiredFields = ['email', 'password'];
+            }
+            $current['auth'] = [
+                'registration' => ['status' => $status],
+                'login' => [
+                    'wp_admin_block_customers' => ! empty($incoming['login']['wp_admin_block_customers']),
+                    'rate_limit' => [
+                        'max_attempts' => max(1, min(20, absint((string) ($incoming['login']['rate_limit']['max_attempts'] ?? 5)))),
+                        'lockout_minutes' => max(1, min(240, absint((string) ($incoming['login']['rate_limit']['lockout_minutes'] ?? 15)))),
+                    ],
+                ],
+                'password' => [
+                    'min_length' => max(6, min(64, absint((string) ($incoming['password']['min_length'] ?? 8)))),
+                    'require_uppercase' => ! empty($incoming['password']['require_uppercase']),
+                    'require_number' => ! empty($incoming['password']['require_number']),
+                    'require_symbol' => ! empty($incoming['password']['require_symbol']),
+                ],
+                'register' => [
+                    'required_fields' => $requiredFields,
+                ],
+            ];
+        } elseif ($tab === 'redirects') {
+            $incoming = is_array($sanitized['redirects'] ?? null) ? $sanitized['redirects'] : [];
+            $current['redirects'] = [];
+            foreach (['after_register', 'after_login', 'after_logout'] as $eventKey) {
+                $type = sanitize_key((string) ($incoming[$eventKey]['type'] ?? 'default'));
+                if (! in_array($type, ['default', 'route', 'page', 'custom_url'], true)) {
+                    $type = 'default';
+                }
+                $target = sanitize_text_field((string) ($incoming[$eventKey]['target'] ?? ''));
+                $current['redirects'][$eventKey] = ['type' => $type, 'target' => $target];
+            }
+            $roleTarget = sanitize_text_field((string) ($incoming['after_login']['by_role']['emonks_customer'] ?? ''));
+            $current['redirects']['after_login']['by_role'] = ['emonks_customer' => $roleTarget];
+        } elseif ($tab === 'lifecycle') {
+            $incomingLifecycle = is_array($sanitized['lifecycle'] ?? null) ? $sanitized['lifecycle'] : [];
+            $incomingPages = is_array($sanitized['pages'] ?? null) ? $sanitized['pages'] : [];
+            $action = sanitize_key((string) ($incomingLifecycle['account_delete']['action'] ?? 'soft_delete'));
+            if (! in_array($action, ['soft_delete', 'hard_delete'], true)) {
+                $action = 'soft_delete';
+            }
+            $current['lifecycle'] = [
+                'account_delete' => [
+                    'action' => $action,
+                    'grace_days' => max(0, min(365, absint((string) ($incomingLifecycle['account_delete']['grace_days'] ?? 14)))),
+                    'retention_days' => max(0, min(3650, absint((string) ($incomingLifecycle['account_delete']['retention_days'] ?? 30)))),
+                ],
+            ];
+            if (! is_array($current['pages'] ?? null)) {
+                $current['pages'] = [];
+            }
+            $current['pages']['conflict_guard'] = ['enabled' => ! empty($incomingPages['conflict_guard']['enabled'])];
         } elseif ($tab === 'user_menu') {
             $userMenuService = Plugin::instance()->get('user_menu');
             $defaults = $userMenuService instanceof UserMenu ? $userMenuService->defaults() : [
@@ -1536,6 +1918,27 @@ HTML;
             }
 
             $current['email_templates'] = ['schema_version' => 1, 'templates' => $templates];
+        } elseif ($tab === 'emails_template') {
+            $htmlTemplateRaw = (string) wp_unslash($_POST['email_layout_html_raw_payload'] ?? '');
+            if ($htmlTemplateRaw === '') {
+                $htmlTemplateRaw = (string) wp_unslash($_POST['email_layout_html_raw'] ?? '');
+            }
+            if ($htmlTemplateRaw === '') {
+                $htmlTemplateRaw = (string) emonks_get_setting('email_layout.html_template', '');
+            }
+            $htmlTemplate = $this->sanitizeEmailLayoutTemplate($htmlTemplateRaw);
+
+            if (trim($htmlTemplate) === '' || (! str_contains($htmlTemplate, '[email_content]') && ! str_contains($htmlTemplate, '{{ content_html }}') && ! str_contains($htmlTemplate, '{{ content_text }}'))) {
+                $htmlTemplate = '<div style="font-family:Arial,sans-serif;color:#1d2327;line-height:1.6;">[email_content]</div>';
+                emonks_flash_add('settings_warning', 'HTML template had geen geldige content-placeholder, fallback is toegepast.');
+            }
+            $existingTextTemplate = (string) emonks_get_setting('email_layout.text_template', "[email_content]\n");
+
+            $current['email_layout'] = [
+                'html_template' => $htmlTemplate,
+                'text_template' => $existingTextTemplate,
+            ];
+            $redirectUrl = admin_url('admin.php?page=emonks-saas-emails&emails_tab=template');
         } elseif ($tab === 'services_builder') {
             $builder = isset($_POST['services_builder']) ? wp_unslash($_POST['services_builder']) : [];
             $builder = is_array($builder) ? $builder : [];
@@ -1993,6 +2396,9 @@ HTML;
             'emonks_workspace_updated' => 'Workspace updated',
             'emonks_billing_plan_changed' => 'Billing plan changed',
             'emonks_auth_login_failed' => 'Auth login failed',
+            'emonks_auth_registration_verify_email_required' => 'Verify email required',
+            'emonks_auth_registration_admin_approval_required' => 'Admin approval required',
+            'emonks_auth_admin_approval_result' => 'Admin approval result',
         ];
     }
 
@@ -2050,6 +2456,58 @@ HTML;
             'conditions' => $conditions,
             'updated_at' => wp_date('Y-m-d H:i:s'),
         ];
+    }
+
+    private function sanitizeEmailLayoutTemplate(string $html): string
+    {
+        $html = trim($html);
+        if ($html === '') {
+            return '';
+        }
+
+        if (! function_exists('wp_kses_allowed_html')) {
+            return $html;
+        }
+
+        $allowed = wp_kses_allowed_html('post');
+        foreach (['html', 'head', 'body', 'meta', 'title', 'style'] as $tag) {
+            $allowed[$tag] = [
+                'class' => true,
+                'dir' => true,
+                'id' => true,
+                'lang' => true,
+                'style' => true,
+            ];
+        }
+        $allowed['meta'] = [
+            'charset' => true,
+            'content' => true,
+            'http-equiv' => true,
+            'name' => true,
+            'viewport' => true,
+        ];
+        $allowed['table'] = array_merge($allowed['table'] ?? [], [
+            'align' => true,
+            'bgcolor' => true,
+            'border' => true,
+            'cellpadding' => true,
+            'cellspacing' => true,
+            'role' => true,
+            'width' => true,
+        ]);
+        foreach (['td', 'th'] as $tag) {
+            $allowed[$tag] = array_merge($allowed[$tag] ?? [], [
+                'align' => true,
+                'bgcolor' => true,
+                'colspan' => true,
+                'height' => true,
+                'rowspan' => true,
+                'valign' => true,
+                'width' => true,
+            ]);
+        }
+
+        return trim(wp_kses($html, $allowed));
     }
 
     /** @param array<string,mixed> $field */
@@ -2157,6 +2615,46 @@ HTML;
         }
 
         return $decoded;
+    }
+
+    /** @return array<int,string> */
+    private function detectPageAssignmentConflicts(): array
+    {
+        $routeKeys = ['account', 'workspaces', 'billing', 'settings', 'onboarding', 'login', 'register', 'logout'];
+        $pageIds = [];
+        $slugs = [];
+        foreach ($routeKeys as $routeKey) {
+            $pageId = absint((string) emonks_get_setting('pages.' . $routeKey . '.page_id', 0));
+            if ($pageId <= 0) {
+                continue;
+            }
+            $pageIds[$routeKey] = $pageId;
+            $slug = sanitize_title((string) get_post_field('post_name', $pageId));
+            if ($slug !== '') {
+                $slugs[$routeKey] = $slug;
+            }
+        }
+
+        $messages = [];
+        $usedPageIds = [];
+        foreach ($pageIds as $routeKey => $pageId) {
+            if (isset($usedPageIds[$pageId])) {
+                $messages[] = $usedPageIds[$pageId] . ' en ' . $routeKey . ' gebruiken dezelfde pagina-ID (' . $pageId . ').';
+            } else {
+                $usedPageIds[$pageId] = $routeKey;
+            }
+        }
+
+        $usedSlugs = [];
+        foreach ($slugs as $routeKey => $slug) {
+            if (isset($usedSlugs[$slug])) {
+                $messages[] = $usedSlugs[$slug] . ' en ' . $routeKey . ' gebruiken dezelfde slug (' . $slug . ').';
+            } else {
+                $usedSlugs[$slug] = $routeKey;
+            }
+        }
+
+        return $messages;
     }
 
     /** @return array<string,mixed> */

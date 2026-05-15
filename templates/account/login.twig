@@ -62,6 +62,16 @@
             <a href="{{ function('wp_lostpassword_url') }}">Wachtwoord vergeten?</a>
             <span class="text-muted">Nog geen account? <a href="/{{ routes.register }}/">Registreren</a></span>
           </div>
+          <hr class="my-3">
+          <form method="post" action="{{ function('emonks_admin_post_url', 'emonks_auth_resend_verification') }}" class="vstack gap-2">
+            {{ function('wp_nonce_field', 'emonks_auth_resend_verification', 'emonks_nonce') }}
+            <label class="form-label mb-0" for="resend_email">Geen verificatiemail ontvangen?</label>
+            <div class="d-flex gap-2">
+              <input id="resend_email" name="email" type="email" class="form-control" placeholder="jij@voorbeeld.nl" required>
+              <button class="btn btn-outline-secondary" type="submit">Opnieuw verzenden</button>
+            </div>
+            <small class="text-muted">We verzenden alleen als je account bestaat en nog geverifieerd moet worden.</small>
+          </form>
         </div>
       </div>
     </div>
